@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt 
 
+# ______________________________________________________________________________________________
 # This function performs the Augmented Dickey-Fuller test, so it receives as an input
 # the time series (it can have nan values, so they need to be filled before) and return
 # False if the serie is not stationary and  True if it is (based on the p-value computed
@@ -40,7 +41,13 @@ def adf_test(series):
     except Exception as e:
         #print(f"Error running ADF test: {e}")
         return None  # If error occurs, consider it non-stationary
-    
+
+
+# ______________________________________________________________________________________________
+# This function performs the decomposition  of the time serie into its trend, season
+# and residual components (whenever it's possible to implement the analysis). It returns 
+# the decomposed time series in a list, of form [trend, seasonal, residual], unless
+# there isn't sufficient data or if some error occurs, in that case it returns None.
 
 def seasonal_additive_decomposition(dataframe, period_observation):
     # Check if the filtered DataFrame has enough data for the decomposition
