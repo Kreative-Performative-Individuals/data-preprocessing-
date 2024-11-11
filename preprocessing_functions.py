@@ -5,6 +5,9 @@ inputs, outputs and functioning'''
 
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import seasonal_decompose
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt 
 
 # This function performs the Augmented Dickey-Fuller test, so it receives as an input
 # the time series (it can have nan values, so they need to be filled before) and return
