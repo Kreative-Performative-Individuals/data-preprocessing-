@@ -39,42 +39,44 @@ def adf_test(series):
         return None  # If error occurs, consider it non-stationary
     
 
-def seasonal_additive_decomposition(dataframe):
+def seasonal_additive_decomposition(dataframe, period_observation):
     # Check if the filtered DataFrame has enough data for the decomposition
-    if filtered_df.empty:
-        print(f"No data found for machine '{machine}', KPI '{kpi}', value '{value}'. Skipping decomposition.")
-        continue  # Skip this iteration
+    if dataframe.empty:
+        #print(f"No data found for the time serie. Skipping decomposition.")
+        return None  
 
     # Drop NaN values and check if there are enough observations
-    series = filtered_df[value].dropna()
+    series = dataframe.dropna()
 
     if len(series) < 2:  # Check if the series has at least 2 observations
-        print(f"Not enough data for machine '{machine}', KPI '{kpi}', value '{value}'. Skipping decomposition.")
-        continue  # Skip this iteration
+        print(f"Not enough data. Skipping decomposition.")
+        return None  
 
     # Ensure the period is correctly set (you may need to adjust this depending on your data's frequency)
-    period = len(months)  # You may need to adapt this if months doesn't represent the full seasonality cycle
+    period = len(period_observation)  # You may need to adapt this if months doesn't represent the full seasonality cycle
 
     if len(series) < 2 * period:  # Ensure enough data points for at least two full cycles
-        print(f"Not enough data for two full cycles for machine '{machine}', KPI '{kpi}', value '{value}'. Skipping decomposition.")
-        continue  # Skip this iteration
+        print(f"Not enough data for two full cycles. Skipping decomposition.")
+        return None  
 
     # Classical decomposition (additive model)
     try:
         decomposition = seasonal_decompose(series, model='additive', period=period)
 
         # Plot the decomposition
-        plt.figure(figsize=(10, 8))
-        decomposition.plot()
-        plt.suptitle(f'Classical Decomposition of Time Series for {machine} - {kpi} - {value}', fontsize=16)
-        plt.show()
+        #plt.figure(figsize=(10, 8))
+        #decomposition.plot()
+        #plt.suptitle(f'Classical Decomposition of Time Series, fontsize=16)
+        #plt.show()
 
         # Access the individual components
         trend = decomposition.trend
         seasonal = decomposition.seasonal
         residual = decomposition.resid
 
+        return [trend, seasonal, residual]
+
     except ValueError as e:
-        print(f"Error during decomposition for machine '{machine}', KPI '{kpi}', value '{value}': {e}")
-        continue  # Skip this iteration if an error occurs during decomposition
+        #print(f"Error during decomposition: {e}")
+        return None  
 
