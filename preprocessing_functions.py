@@ -90,3 +90,22 @@ def seasonal_additive_decomposition(dataframe, period_observation):
         #print(f"Error during decomposition: {e}")
         return None  
 
+# ______________________________________________________________________________________________
+# This function allows to encode cyclical feature based on the hours of a day, in order to
+# highlight daily seasonalities. It receive as an input the time serie, adds the column of
+# encoded hour by the use of sine and cosine and return the enriched time serie.
+
+def add_cyclic_features(df):
+    df['hour_sin'] = np.sin(2 * np.pi * df['time'].dt.hour / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['time'].dt.hour / 24)
+    return df
+
+# ______________________________________________________________________________________________
+# This function 
+
+
+def make_stationary(df, kwargs):
+    # Apply differencing or seasonal adjustments to make the data stationary
+    differencing_order = kwargs.get('differencing_order', 1)  # Default: First-order differencing
+    df['value_diff'] = df['value'].diff(periods=differencing_order)
+    return df
