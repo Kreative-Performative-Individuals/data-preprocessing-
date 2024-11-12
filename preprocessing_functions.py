@@ -99,9 +99,92 @@ def add_cyclic_features(df):
     df['hour_sin'] = np.sin(2 * np.pi * df['time'].dt.hour / 24)
     df['hour_cos'] = np.cos(2 * np.pi * df['time'].dt.hour / 24)
     return df
+# ________________________________
+# This function takes in input the data point that we are receiving and checks its reliability in terms of format. 
+# In output it will return nothing if the data point is too incomplete to correctly identify and use it, or the reconstructed data point with nans whenever some value is missing.
+
+from collections import OrderedDict
+from dateutil import parser
+from datetime import timezone
+
+def validate_data_format(x):
+    # Check if all essential columns are present: if the first four fields are missing then
+    # the identity of the data point is unknown, thus, it needs to be deleted. 
+    # Otherwise, (one of the remaining 4 fields in missing), set the missing column as missing. 
+    # If all the aggregates are missing the data point is discarded as well.
+    expected_columns = ['time', 'asset_id', 'name', 'kpi', 'sum', 'avg', 'min', 'max']
+    missing_columns = [col for col in expected_columns if col not in list(x.keys())]
+    essential_missing_columns=list(np.intersect1d(expected_columns[:4], list(x.keys())))
+    optional_missing_columns=list(np.intersect1d(expected_columns[4:], list(x.keys())))
+    if any(item in expected_columns[:4] for item in missing_columns) or any(pd.isna(item) for item in [x.get(key) for key in essential_missing_columns]):
+        print('Data point misses essential fields. Discarded.')
+        return None
+    elif all(pd.isna(item) for item in [x.get(key) for key in optional_missing_columns]):
+        print('Data point containing only nan values. Discarded')
+        return None
+    else:
+        for col in missing_columns:
+            x[col] = np.nan
+    x = dict(OrderedDict((key, x[key]) for key in expected_columns))
+
+    # Try to set the format of the 'time' field into the most used one (ISO 8601 format in UTC)
+    try:
+        date_obj = parser.parse(x['time'])
+        x['time'] = date_obj.replace(tzinfo=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+    except Exception as e:
+        print("Invalid time format. Discarded data point.")
+        return None
+    
+    # Check if the aggregations (min, max, sum, avg) sarisfy the basic logic rule min<=avg<=max<=sum
+    dp_aggregations=[z for z in [x['min'], x['avg'], x['max'], x['sum']] if not np.isnan(z)]
+    if all(dp_aggregations[i] <= dp_aggregations[i+1] for i in range(len(dp_aggregations)-1)):
+        pass
+    else:
+        for col in expected_columns[4:]:
+            x[col]=np.nan
+            
+    return x
+
+# ________________________________
+# This function is an exemplified version of a set of checks regarding the range that the data point value can assume according to the specific physical quantity that it represents.
+
+def check_range(x):
+    # The check of range depends on the nature of the data point. For sensor data, the range requires 
+    # knowledge of the machine characteristics and functioning.
+    # In a prototype framework we assume to receive sensor data about temperature in K ... 
+    max_temp=500
+    if x['kpi']=='temperature':
+        if (x['min'] >= 0) and (not pd.isna(x['min'])) and (x['max'] <= max_temp) and (not pd.isna(pd.isna(x['max']))):
+            pass
+        else: #the data point doesn't satisfy the range according to the physical meaning of the quantity that has been measured.
+            for agg in ['sum', 'avg', 'min', 'max']:
+                x[agg]=np.nan
+    return x
+
+
+# ________________________________
+# This function is the one that allow the imputation of missing values.
+# As a first version we use the average of the previous 14 points in the timeseries as 
+# an imputation method even if suboptimal. Future modifications will include more sophiasticated methods
+# able to produce a better estimation of the missing value, based on the recent history of the timeseries (SARIMA)
+def impute(x, buffer_size):
+    buffer=[]
+    for key, value in list(x.items())[-4:]:
+        if np.isnan(value):
+            values = [dp[key] for dp in buffer if not np.isnan(dp[key])]
+            if values:  
+                x[key] = np.mean(values)
+
+    buffer.append(x)
+
+    if len(buffer) > buffer_size:
+        buffer.pop(0) 
+    return x
 
 # ______________________________________________________________________________________________
-# This function 
+# This function uses differencing to make a time serie stationary. It takes as input the time 
+# serie and the kwargs containing the differencing order, applies the differencing and return
+# the modified database, which have an extra column.
 
 
 def make_stationary(df, kwargs):
