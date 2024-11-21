@@ -8,6 +8,9 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt 
+from collections import OrderedDict
+from dateutil import parser
+from datetime import timezone
 
 # ______________________________________________________________________________________________
 # This function performs the Augmented Dickey-Fuller test, so it receives as an input
@@ -99,13 +102,11 @@ def add_cyclic_features(df):
     df['hour_sin'] = np.sin(2 * np.pi * df['time'].dt.hour / 24)
     df['hour_cos'] = np.cos(2 * np.pi * df['time'].dt.hour / 24)
     return df
-# ________________________________
+
+# ______________________________________________________________________________________________
 # This function takes in input the data point that we are receiving and checks its reliability in terms of format. 
 # In output it will return nothing if the data point is too incomplete to correctly identify and use it, or the reconstructed data point with nans whenever some value is missing.
 
-from collections import OrderedDict
-from dateutil import parser
-from datetime import timezone
 
 def validate_data_format(x):
     # Check if all essential columns are present: if the first four fields are missing then
@@ -145,7 +146,7 @@ def validate_data_format(x):
             
     return x
 
-# ________________________________
+# ______________________________________________________________________________________________
 # This function is an exemplified version of a set of checks regarding the range that the data point value can assume according to the specific physical quantity that it represents.
 
 def check_range(x):
@@ -162,7 +163,7 @@ def check_range(x):
     return x
 
 
-# ________________________________
+# ______________________________________________________________________________________________
 # This function is the one that allow the imputation of missing values.
 # As a first version we use the average of the previous 14 points in the timeseries as 
 # an imputation method even if suboptimal. Future modifications will include more sophiasticated methods
@@ -197,9 +198,6 @@ def make_stationary(df, kwargs):
 # This function takes in input the data point that we are receiving and checks its reliability in terms of format. 
 # In output it will return nothing if the data point is too incomplete to correctly identify and use it, or the reconstructed data point with nans whenever some value is missing.
 
-from collections import OrderedDict
-from dateutil import parser
-from datetime import timezone
 
 def validate_data_format(x):
     # Check if all essential columns are present: if the first four fields are missing then
