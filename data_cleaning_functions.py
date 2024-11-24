@@ -15,17 +15,21 @@ from collections import OrderedDict
 from dateutil import parser
 from datetime import timezone
 from collections import deque
+from information import features, identity, kpi
 
 ''''
 ________________________________________________________________________________________________________
 FUNCTIONS FOR DATA CLEANING
 ________________________________________________________________________________________________________
 '''
+
+
 # ______________________________________________________________________________________________
-# This function takes in input the data point that we are receiving and checks its reliability
-# in terms of logic consistency, so it checks if the features (min, max, sum, avg) sarisfy the
-# basic logic rule min<=avg<=max<=sum. In output it will return an indicator array, where each
-# cell gives False if the rule is not respected or True if it is.
+# This function takes in input the data point that we are receiving and checks the reliability 
+# of its features in terms of logic consistency (min<=avg<=max<=sum). If one of these conditions is 
+# not satisfied, then it means that the involved features are not working as expected. In this function
+# we set the corrisponding indicator as False (check not passed), and in the main code (validate_format) the
+# corrisponding value will be put at nan since its information is not reliable.
 
 def check_f_consistency(x):
     indicator=[True, True, True, True]
@@ -57,15 +61,10 @@ def check_f_consistency(x):
 
 # ______________________________________________________________________________________________
 # This function takes in input the data point that we are receiving and checks its reliability in
-# terms of format. In output it will return nothing if the data point is too incomplete to 
-# correctly identify and use it, or the reconstructed data point with nans whenever some value is
-# missing.
+# terms of format. In general, if the data point is too severly compromised (one of the identity fields is 
+# nan or missing, all features are nan), then it is discarded (return None).
 
 def validate_format(x):
-    # Check if all essential columns are present: if the first four fields are missing then
-    # the identity of the data point is unknown, thus, it needs to be deleted. 
-    # Otherwise, (one of the remaining 4 fields in missing), set the missing column as missing. 
-    # If all the aggregates are missing the data point is discarded as well.
 
     missing_identity = [field for field in identity if field not in list(x.keys())]
     missing_features = [field for field in features if field not in list(x.keys())]
@@ -104,9 +103,10 @@ def validate_format(x):
 
 # ______________________________________________________________________________________________
 # This function is an exemplified version of a set of checks regarding the range that the data 
-# point value can assume according to the specific physical quantity that it represents. It 
-# receives as an input the input data point and checks it ranges according to the kpi information.
-# If the value is outside given thresholds if returns False, if everything is okey returns True.
+# point value can assume. In first analysis we have considered the kpi to have an expected range
+# that is common to all machines. Further improvement may involve define expected ranges specific
+# for the machine_type. It will return True if the range is appropriate (passed check) and False 
+# otherwise.
 
 def check_range(x):
     flag=True
@@ -123,9 +123,9 @@ def check_range(x):
         return x, flag
     
 # ______________________________________________________________________________________________
-# This function receives as an input a batch of data representing the previous data points. 
-# It applies the model Exponential Smoothing to predict and return one future step in the time 
-# serie or None if there is no sufficient information in the batch to fill the NaN value.
+# This function is the one that phisically make the imputation for a specific feature of the data point. 
+# It receives in input the univariate batch that needs to use and according to the required number of data
+# needed by the Exponential Smoothing, it decides to use it or to simply adopt the maean.
 
 def predict_missing(batch):
     seasonality=7
@@ -145,13 +145,12 @@ def predict_missing(batch):
         return np.nan # Leave the feature as nan since we don't have any information in the batch to make the imputation.
 
 # ______________________________________________________________________________________________
-# This function receives as an input the new data point, extracts the information
+# This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
 
-def imputer(x):
+def imputer(x, im):
     if x:
         x=x[0]
         nan_cons_thr=3
-        im=infoManager(x)
 
         # Try imputation with mean or the HWES model.
         for f in features:
