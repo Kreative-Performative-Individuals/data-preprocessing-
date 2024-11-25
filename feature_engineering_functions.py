@@ -79,6 +79,9 @@ def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
     
     # Find the lag with the highest ACF value (most prominent)
     highest_acf_lag = significant_lags[np.argmax(acf_values[significant_lags])]
+
+    if highest_acf_lag  <= 1 or highest_acf_lag == len(df):
+        return None  # No significant seasonality detected
     
     # Return the corresponding period (seasonality)
     return highest_acf_lag
@@ -108,6 +111,8 @@ def detect_seasonality_fft(df):
     # Convert the frequency to the corresponding period (seasonality period)
     if peak_frequency != 0:
         period = int(round(1 / peak_frequency))
+        if period  <= 1 or period == len(df):
+            return None  # No significant seasonality detected
     else:
         period = None  # No significant seasonality detected
     
@@ -144,18 +149,18 @@ def seasonal_additive_decomposition(dataframe, period):
     try:
         decomposition = seasonal_decompose(series, model='additive', period=period)
 
-        # Plot the decomposition
-        #plt.figure(figsize=(10, 8))
-        #decomposition.plot()
-        #plt.suptitle(f'Classical Decomposition of Time Series, fontsize=16)
-        #plt.show()
+        #Plot the decomposition
+        plt.figure(figsize=(10, 8))
+        decomposition.plot()
+        plt.suptitle(f'Classical Decomposition of Time Series', fontsize=16)
+        plt.show()
 
         # Access the individual components
         trend = decomposition.trend
         seasonal = decomposition.seasonal
         residual = decomposition.resid
 
-        return [trend, seasonal, residual]
+        return [[trend, seasonal, residual]]
 
     except ValueError as e:
         #print(f"Error during decomposition: {e}")
@@ -328,15 +333,19 @@ def rest_seasonality(df, decompositions):
 # multiple seasonality analysis. The function rests the seasons and returns a single deseasoned 
 # time serie.
 
+
 def get_residuals(df, decompositions):
-    # Create a new time series of the same length as residual_series, filled with zeros
-    residual_series = pd.Series(0, index=decomposition[0][1].index, dtype='float')
-
-    # Subtract seasonal and trend components from the original data for each seasonality
-    for decomposition in decompositions:
-        residual = decomposition[2]
-        residual_series += residual
-
+    # Ensure decompositions is not empty
+    if not decompositions or len(decompositions) == 0:
+        raise ValueError("Decompositions data is missing or empty.")
+    
+    # Start with the residual from the first decomposition
+    residual_series = decompositions[0][2]  # Assuming [2] is the residual component of the decomposition
+    
+    # Loop through the remaining decompositions and sum the residuals
+    for decomposition in decompositions[1:]:
+        residual_series += decomposition[2]  # Add residual from each decomposition
+    
     return residual_series
 
 '''
