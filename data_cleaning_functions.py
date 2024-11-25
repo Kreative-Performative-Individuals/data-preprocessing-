@@ -142,12 +142,11 @@ def predict_missing(batch):
 # ______________________________________________________________________________________________
 # This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
 
-def imputer(x):
+def imputer(x, im):
     if x:
         x=x[0] #Because checked data will return two values (the data point and the result of the check)
         nan_cons_thr=3
-        im=infoManager()
-        
+
         # Try imputation with mean or the HWES model.
         for f in features:
             batch = im.get_batch(f)
