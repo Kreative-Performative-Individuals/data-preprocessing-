@@ -66,11 +66,12 @@ def validate_format(x):
 
     # Check is any identity field is missing or if any of them is nan.
     if missing_identity or any(pd.isna(x.get(key)) for key in identity):
-        print('Data point misses essential fields. Discarded.')
+        time=x['time']
+        print(f'Data point at time {time} misses essential fields. Discarded.')
         return None # In this case the data point is discarder: its identity is unknown.
     # Check if all the features that the datapoint has are nan or missing.
     elif all(pd.isna(x.get(key)) for key in features):
-        print('Data point is useless becasue either all features are nan or missing. Discarded')
+        print(f'Data point {time} is useless becasue either all features are nan or missing. Discarded')
         return None # Also in this case the data point is discarded since it doesn't even contain the least meaningful information.
     else: # It means that the identity is well defined and at least one of the feature values is non nan --> the data point can be useful.
         for mf in missing_features:
@@ -81,7 +82,7 @@ def validate_format(x):
     # Try to set the format of the 'time' field into the most used one (ISO 8601 format in UTC)
     try:
         date_obj = parser.parse(x['time'])
-        x['time'] = date_obj.replace(tzinfo=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+        x['time'] = date_obj.replace(tzinfo=timezone.utc).isoformat(timespec='seconds')
     except Exception as e:
         print("Invalid time format. Discarded data point.")
         return None
@@ -89,11 +90,13 @@ def validate_format(x):
     # Check if the features (min, max, sum, avg) sarisfy the basic logic rule min<=avg<=max<=sum
     cc=check_f_consistency(x)
     if not any(cc): #meaning that no feature respect the logic rule
+        print(f'The data point at time {time} is too much compromised. Discarded')
         return None #discard the datapoint: too much compromised.
     else:
         for f, c in zip(features, cc):
             if c==False:
                 x[f]=np.nan
+    #print(f'data point after validation: {x}')
     return x
 
 # ______________________________________________________________________________________________
@@ -106,8 +109,8 @@ def validate_format(x):
 def check_range(x):
     flag=True
     if x: # Check the range only if the validation has not discarded the data point.
-        l_thr=kpi[x['kpi']][0]
-        h_thr=kpi[x['kpi']][1]
+        l_thr=kpi[x['kpi']][0][0]
+        h_thr=kpi[x['kpi']][0][1]
         for k in list(x.keys())[-5:] :
             if x[k]<l_thr:
                 x[k]=np.nan
@@ -115,7 +118,10 @@ def check_range(x):
         if x['max']>h_thr:
             x['max']=np.nan
             flag=False
-        return x, flag
+        if all(np.isnan(value) for value in [x.get(key) for key in features]):
+            return None
+        else:
+            return x, flag
     
 # ______________________________________________________________________________________________
 # This function is the one that phisically make the imputation for a specific feature of the data point. 
@@ -128,12 +134,12 @@ def predict_missing(batch):
     #print(cleaned_batch)
     if not(all(pd.isna(x) for x in batch)) and batch:
         if len(cleaned_batch)>2*seasonality:
-            print('**Use Exp Smoothing for prediction**')
+            #print('**Use Exp Smoothing for prediction**')
             model = ExponentialSmoothing(cleaned_batch, seasonal='add', trend='add', seasonal_periods=seasonality)
             model_fit = model.fit()
             prediction = model_fit.forecast(steps=1)[0]
         else:
-            print('**Use mean for prediction**')
+            #print('**Use mean for prediction**')
             prediction=np.nanmean(batch)
         return prediction
     else: 
@@ -149,16 +155,16 @@ def imputer(x, im):
 
         # Try imputation with mean or the HWES model.
         for f in features:
-            batch = im.get_batch(f)
+            batch = im.get_batch(x, f)
             if pd.isna(x[f]):
-                    counter=im.update_counter(f)
+                    counter=im.update_counter(x, f)
                     x[f]=predict_missing(batch)
             else: 
-                counter=im.update_counter(f, True)
+                counter=im.update_counter(x, f, True)
             if counter>nan_cons_thr:
-                point_id='/'.join(map(str, list(x.values())[1:4]+list([f])))
-                print("It's been " + str(counter) + ' days that [' + str(point_id) + '] is missing')
-        print(f'after imputation dp: {x}')
+                point_id='/'.join(map(str, list(x.values())[1:5]+list([f])))
+                print("!!!!!!!!!!!!!!!!!!!!!!!! ___________ It's been " + str(counter) + ' days that [' + str(point_id) + '] is missing ____________ !!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        #print(f'after imputation dp: {x}')
 
         # Check again the consistency of features and the range.
         if check_f_consistency(x) and check_range(x)[1]:
@@ -166,15 +172,35 @@ def imputer(x, im):
         else:  # It means that the imputed data point has not passed the check on the features and on their expected range.
             # In this case we use the LVCF as a method of imputation since it ensures the respect of these conditiono (the last point in the batch has been preiovusly checked)
             for f in features:
-                batch=im.get_batch(f)
+                batch=im.get_batch(x, f)
                 x[f]=batch[-1]
 
-        print(f'after check again dp: {x}')
+        #print(f'after check again dp: {x}')
         
         # In the end update batches with the new data point
         for f in features:
-            print(f'original batch {f}: {im.get_batch(f)}')
-            im.update_batch(f, x[f])
-            print(f'batch after update {f}: {im.get_batch(f)}')
+            #print(f'original batch {f}: {im.get_batch(x, f)}')
+            im.update_batch(x, f, x[f])
+            #print(f'batch after update {f}: {im.get_batch(x, f)}')
 
         return x
+
+# ______________________________________________________________________________________________
+# This function implements all the steps needed for the cleaning in order to fuse the cleaning into one code line.
+def cleaning_pipeline(x, im):
+    validated_dp=validate_format(x)
+    checked_dp=check_range(validated_dp)
+    cleaned_dp=imputer(checked_dp, im)
+    # if cleaned_dp is None: #just for visualization purposes
+    #     cleaned_dp={}
+    #     cleaned_dp['time']=x['time']
+    #     cleaned_dp['asset_id']=x['asset_id']
+    #     cleaned_dp['name']=x['name']
+    #     cleaned_dp['kpi']=x['kpi']
+    #     cleaned_dp['min']=0
+    #     cleaned_dp['avg']=0
+    #     cleaned_dp['max']=0
+    #     cleaned_dp['sum']=0
+    #     cleaned_dp['var']=0
+    return cleaned_dp
+
