@@ -1,21 +1,16 @@
 ''' In this code we stored the functions that were used in the cleaning section of the
 preprocessing pipeline, including a brief description of their inputs, outputs and functioning'''
 
-from collections import OrderedDict
-from dateutil import parser
-from datetime import timezone
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import acf
+
 import numpy as np
 import pandas as pd
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from matplotlib import pyplot as plt 
 from collections import OrderedDict
 from dateutil import parser
 from datetime import timezone
 from collections import deque
-from information import features, identity, kpi
+from information import features, identity, kpi, infoManager
 
 ''''
 ________________________________________________________________________________________________________
@@ -147,11 +142,12 @@ def predict_missing(batch):
 # ______________________________________________________________________________________________
 # This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
 
-def imputer(x, im):
+def imputer(x):
     if x:
-        x=x[0]
+        x=x[0] #Because checked data will return two values (the data point and the result of the check)
         nan_cons_thr=3
-
+        im=infoManager()
+        
         # Try imputation with mean or the HWES model.
         for f in features:
             batch = im.get_batch(f)

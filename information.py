@@ -1,15 +1,5 @@
-from collections import OrderedDict
-from dateutil import parser
-from datetime import timezone
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import acf
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt 
-from collections import OrderedDict
-from dateutil import parser
 from datetime import timezone
 from collections import deque
 
@@ -41,29 +31,26 @@ kpi={'energy_cost': [0, 1000],
      'carbon_foot_print': [0, 20]}
 
 class infoManager:
-    def __init__(self, x):
-        self.x=x
-        self.machine=x['name']
-        self.id=x['asset_id']
-        self.kpi=x['kpi']
-        self.b_length=40 # It can be changed
+    def __init__(self, info):
+        self.info=info
 
-    def get_batch(self, f):        
+    def get_batch(self, x, f):        
         # This function will return batch, counter
-        return list(info[self.machine][self.id][self.kpi][0][features.index(f)])
+        return list(self.info[x['name']][x['asset_id']][x['kpi']][0][features.index(f)])
     
-    def update_batch(self, f, p): 
-        dq=deque(info[self.machine][self.id][self.kpi][0][features.index(f)])
+    def update_batch(self, x, f, p): 
+        b_length=40
+        dq=deque(self.info[x['name']][x['asset_id']][x['kpi']][0][features.index(f)])
         dq.append(p)
         
-        if len(dq)>self.b_length:
+        if len(dq)>b_length:
             dq.popleft()
         # Store the new batch into the info dictionary.
-        info[self.machine][self.id][self.kpi][0][features.index(f)]=dq
+        self.info[x['name']][x['asset_id']][x['kpi']][0][features.index(f)]=dq
     
-    def update_counter(self, f, reset=False):
+    def update_counter(self, x, f, reset=False):
         if reset==False:
-            info[self.machine][self.id][self.kpi][1][features.index(f)]=info[self.machine][self.id][self.kpi][1][features.index(f)]+1
+            self.info[x['name']][x['asset_id']][x['kpi']][1][features.index(f)]=self.info[x['name']][x['asset_id']][x['kpi']][1][features.index(f)]+1
         else:
-            info[self.machine][self.id][self.kpi][1][features.index(f)]=0
-        return info[self.machine][self.id][self.kpi][1][features.index(f)] 
+            self.info[x['name']][x['asset_id']][x['kpi']][1][features.index(f)]=0
+        return self.info[x['name']][x['asset_id']][x['kpi']][1][features.index(f)] 
