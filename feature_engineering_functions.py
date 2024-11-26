@@ -76,11 +76,17 @@ def feature_engineering_pipeline(dataframe, kwargs):
                         is_stationary = adf_test(feature.dropna())
                         print('Is stationary after trying to make it stationary? ' + str(is_stationary))
                         if not is_stationary:
-                            feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                            if seasonality_period == None:
+                                feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                            else: 
+                                feature = make_stationary_diff(feature, seasonality_period=[seasonality_period])
                             is_stationary = adf_test(feature.dropna())
                             print('Is stationary after re-trying to make it stationary? ' + str(is_stationary))
                     else:
-                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        if seasonality_period == None:
+                            feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        else: 
+                            feature = make_stationary_diff(feature, seasonality_period=[seasonality_period])
                         is_stationary = adf_test(feature.dropna())
                         print('Is stationary after trying to make it stationary? ' + str(is_stationary))
             
@@ -94,14 +100,19 @@ def feature_engineering_pipeline(dataframe, kwargs):
                     if decompositions != None:
                         feature = rest_seasonality(feature, decompositions)
                     else:
-                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
-            
+                        if seasonality_period == None:
+                            feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        else: 
+                            feature = make_stationary_diff(feature, seasonality_period=[seasonality_period])
                 if get_residuals:
                     if decompositions != None:
                         feature = get_residuals(feature, decompositions)
                     else:
                         feature = make_stationary_diff(feature)
-                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        if seasonality_period == None:
+                            feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        else: 
+                            feature = make_stationary_diff(feature, seasonality_period=[seasonality_period])
                 
                 if scaler:
                     # Apply standardization (z-score scaling)
@@ -110,7 +121,6 @@ def feature_engineering_pipeline(dataframe, kwargs):
             dataframe[feature_name] = feature
 
     return dataframe
-
 # ______________________________________________________________________________________________
 # This function takes in input the kpi_name, machine_name, operation_name and the data and filter
 # the dataset for the given parameters. It returns the filtered data.
