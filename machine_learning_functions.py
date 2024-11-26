@@ -38,3 +38,39 @@ def ADWIN_drift(dataframe, delta=0.002, clock=10):
                 drift_presence = True
 
     return drift_presence
+
+# ______________________________________________________________________________________________
+# This class is the one responsible for the training and prediction of anomalies. For the training part 
+# it will return the trained model for the specific identity; whereas for the prediction part, it will 
+# take a single data point in input and return the prediction.
+
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import silhouette_score
+import pandas as pd
+import numpy as np
+class AnomalyDetector:
+    def __init__(self):
+        self.features=['sum', 'avg', 'min', 'max', 'var']
+        
+    def train(self, hist_ts):
+        train_set=pd.DataFrame(hist_ts)[self.features]
+        s=[]
+        cc=np.arange(0.01, 0.5, 0.01)
+        for c in cc:
+            model = IsolationForest(n_estimators=200, contamination=c)
+            an_pred=model.fit_predict(train_set)
+            s.append(silhouette_score(train_set, an_pred))
+        optimal_c=cc[np.argmax(s)]
+        #print(optimal_c)
+        model = IsolationForest(n_estimators=200, contamination=optimal_c)
+        model.fit_predict(train_set)
+        return model 
+    
+    def predict(self, x, model):
+        dp=pd.DataFrame(x[self.features]).T
+        anomaly=model.predict(dp)
+        if anomaly==-1:
+            anomaly='Anomaly'
+        else:
+            anomaly='Normal'
+        return anomaly

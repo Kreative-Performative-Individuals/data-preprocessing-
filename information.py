@@ -27,7 +27,7 @@ ML_algorithms_config = {
         'detrend': False,         # Default: False
         'deseasonalize': False,   # Default: False
         'get_residuals': True,    # Default: False
-        'scaler': False           # Default: True
+        'scaler': False           # Default: False
     }
 }
 
