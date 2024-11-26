@@ -70,9 +70,8 @@ class infoManager:
             self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][1][features.index(f)]=0
         return self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][1][features.index(f)]
 
-    def get_model_ad(self, id): #id should contain the identity of the kpi about whihc we are storing the model 
-                                     #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
-         return self.info[id[1]][id[0]][id[2]][id[3]][2]
+    def get_model_ad(self, x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
+        return self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]
     
-    def update_model_ad(self, id, model):
-        self.info[id[1]][id[0]][id[2]][id[3]][2]=model
+    def update_model_ad(self, x, model):
+        self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]=model
