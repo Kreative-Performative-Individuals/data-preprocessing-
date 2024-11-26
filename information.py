@@ -17,16 +17,16 @@ machine={'metal_cutting': ['ast-yhccl1zjue2t', 'ast-ha448od5d6bd', 'ast-6votor3o
 ML_algorithms_config = {
     'forecasting_ffnn': {
         'make_stationary': True,  # Default: False
-        'detrend': True,          # Default: False
-        'deseasonalize': True,    # Default: False
-        'get_residuals': True,    # Default: False
+        'detrend': False,          # Default: False
+        'deseasonalize': False,    # Default: False
+        'get_residuals': False,    # Default: False
         'scaler': True             # Default: True
     },
     'anomaly_detection': {
         'make_stationary': False, # Default: False
         'detrend': False,         # Default: False
         'deseasonalize': False,   # Default: False
-        'get_residuals': True,    # Default: False
+        'get_residuals': False,    # Default: False
         'scaler': False           # Default: False
     }
 }
