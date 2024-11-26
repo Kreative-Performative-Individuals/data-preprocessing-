@@ -75,3 +75,10 @@ class infoManager:
     
     def update_model_ad(self, x, model):
         self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]=model
+
+    def get_model_forecast(self, x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
+        return self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]
+    
+    def update_model_forecast(self, x, model):
+        self.info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]=model
+
