@@ -14,6 +14,23 @@ machine={'metal_cutting': ['ast-yhccl1zjue2t', 'ast-ha448od5d6bd', 'ast-6votor3o
 'testing': ['ast-nrd4vl07sffd', 'ast-pu7dfrxjf2ms', 'ast-06kbod797nnp'],
 'riveting': ['ast-o8xtn5xa8y87']}
 
+ML_algorithms_config = {
+    'forecasting_ffnn': {
+        'make_stationary': True,  # Default: False
+        'detrend': True,          # Default: False
+        'deseasonalize': True,    # Default: False
+        'get_residuals': True,    # Default: False
+        'scaler': True             # Default: True
+    },
+    'anomaly_detection': {
+        'make_stationary': False, # Default: False
+        'detrend': False,         # Default: False
+        'deseasonalize': False,   # Default: False
+        'get_residuals': True,    # Default: False
+        'scaler': False           # Default: True
+    }
+}
+
 # The following dictionary is organized as follows: for each type of kpi [key], the corrisponding value is a list of two elements - min and max of the expected range.
 # We consider in this dictionary only 'pure' kpis that we expect from machines directly, as indicated in the tassonomy produced by the topic 1.
 kpi={'time': [[0, 86400], ['working', 'idle', 'offline']], # As indicated in the taxonomy the time is reported in seconds.

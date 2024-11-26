@@ -22,6 +22,106 @@ ________________________________________________________________________________
 FUNCTIONS FOR FEATURES ENGINEERING
 ________________________________________________________________________________________________________
 '''
+# THIS IS THE MAIN FUNCTION FOR THE FEATURE ENGINEERING
+# The input dataframe corresponds to a filtrate version of the dataset for a given machine, kpi and 
+# operation, so it contains 9-10  columns (depending on the presence ['sum', 'avg','min', 'max', 'var'])
+# and the amount of entries correspondent to the selected time range.
+# It also take kwargs as a parameter, which recall the information about how to set the time serie in
+# order to have a proper input for the machine learning algortithms.
+# It performs several operations on the time series, depending on the kwargs, such as  make_stationary, detrend,
+# deseasonalize, get_residuals, scaler.
+# It gives as an output the transformed time serie.
+
+def feature_engineering_pipeline(dataframe, kwargs):
+    features = ['sum', 'avg','min', 'max', 'var']
+    for feature_name in features:
+        # Check if the column exists in the DataFrame
+        if feature_name in dataframe.columns:
+            print("-------------------- Results for " + str(feature_name))
+            feature = dataframe[feature_name]
+            if feature.empty or feature.isna().all() or feature.isnull().all():
+                print("Feature is empty (no data).")
+            else:
+                ## Check stationarity 
+                # (output is False if not stationary, True if it is, None if test couldn't be applied)
+                is_stationary = adf_test(feature.dropna()) 
+                print('Output is stationary? ' + str(is_stationary))
+            
+                ## Check seasonality
+                # (output: period of the seasonality None if no seasonalaty was detected.
+                seasonality_period = detect_seasonality_acf(feature)
+                print('Seasonality period is? ' + str(seasonality_period))
+            
+                #further check in the case the seasonality pattern is complex and cannot be detected
+                if seasonality_period == None:
+                    # (output: period of the seasonality None if no seasonalaty was detected.
+                    seasonality_period = detect_seasonality_fft(feature)
+                    print('Recomputed seasonality period is? ' + str(seasonality_period))
+            
+                # (output: the decomposed time series in a list, of form [trend, seasonal, residual],
+                # None if it isn't sufficient data or if some error occurs.
+                decompositions = seasonal_additive_decomposition(feature, seasonality_period) 
+
+                #Make data stationary / Detrend / Deseasonalize (if needed)
+            
+                make_stationary = kwargs.get('make_stationary', False)  # Set default to False if not provided
+                detrend = kwargs.get('detrend', False) # Set default to False if not provided
+                deseasonalize = kwargs.get('deseasonalize', False) # Set default to False if not provided
+                get_residuals = kwargs.get('get_residuals', False) # Set default to False if not provided
+                scaler = kwargs.get('scaler', False)  # Set default to False if not provided
+                
+                if make_stationary and (not is_stationary):
+                    if decompositions != None:
+                        feature = make_stationary_decomp(feature, decompositions)
+                        is_stationary = adf_test(feature.dropna())
+                        print('Is stationary after trying to make it stationary? ' + str(is_stationary))
+                        if not is_stationary:
+                            feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                            is_stationary = adf_test(feature.dropna())
+                            print('Is stationary after re-trying to make it stationary? ' + str(is_stationary))
+                    else:
+                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                        is_stationary = adf_test(feature.dropna())
+                        print('Is stationary after trying to make it stationary? ' + str(is_stationary))
+            
+                if detrend:
+                    if decompositions != None:
+                        feature = rest_trend(feature, decompositions)
+                    else:
+                        feature = make_stationary_diff(feature)
+                
+                if deseasonalize:
+                    if decompositions != None:
+                        feature = rest_seasonality(feature, decompositions)
+                    else:
+                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+            
+                if get_residuals:
+                    if decompositions != None:
+                        feature = get_residuals(feature, decompositions)
+                    else:
+                        feature = make_stationary_diff(feature)
+                        feature = make_stationary_diff(feature, seasonality_period=[7]) #default weekly
+                
+                if scaler:
+                    # Apply standardization (z-score scaling)
+                    feature = (feature - np.mean(feature)) / np.std(feature)
+            
+            dataframe[feature_name] = feature
+
+    return dataframe
+
+# ______________________________________________________________________________________________
+# This function takes in input the kpi_name, machine_name, operation_name and the data and filter
+# the dataset for the given parameters. It returns the filtered data.
+
+def extract_features(kpi_name, machine_name, operation_name, data):
+
+  filtered_data = data[(data["name"] == machine_name) & (data["kpi"] == kpi_name)] & (data["operation"] == operation_name)]
+  filtered_data['time'] = pd.to_datetime(filtered_data['time'])
+  filtered_data = filtered_data.sort_values(by='time')
+
+  return filtered_data
 
 # ______________________________________________________________________________________________
 # This function performs the Augmented Dickey-Fuller test, so it receives as an input
