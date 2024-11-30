@@ -1,8 +1,6 @@
 from river import drift
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
-from information import features, identity, infoManager, b_length
+from infoManager import features, identity, b_length, get_batch
 
 ''''
 ________________________________________________________________________________________________________
@@ -15,12 +13,12 @@ ________________________________________________________________________________
 # arguments, the first takes the value False if no drift was detected or True if there is some 
 # drift, while the second returns the drift points. 
 
-def ADWIN_drift(x, im, delta=0.002, clock=10):
+def ADWIN_drift(x, delta=0.002, clock=10):
 
     for f in features:
 
         # Check if the column exists in the DataFrame
-        batch = im.get_batch(x, f)
+        batch = get_batch(x, f)
         batch1 = batch[:-1]
         batch2 = batch[1:]
         adwin = drift.ADWIN(delta=0.05, clock=10)

@@ -5,12 +5,11 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from matplotlib import pyplot as plt 
 from collections import OrderedDict
 from dateutil import parser
-from datetime import timezone
-from collections import deque
-from information import features, identity, kpi, infoManager
+from datetime import timezone, datetime
+from infoManager import features, identity, kpi, faulty_aq_tol, get_batch, update_counter, update_batch, get_counter, discarded_path
+import json
 
 ''''
 ________________________________________________________________________________________________________
@@ -59,70 +58,94 @@ def check_f_consistency(x):
 # terms of format. In general, if the data point is too severly compromised (one of the identity fields is 
 # nan or missing, all features are nan), then it is discarded (return None).
 
-def validate_format(x):
+def save_disc_dp(x):
+    with open(discarded_path, "r") as json_file:
+        discarded_dp = json.load(json_file)
+    with open(discarded_path, "w") as json_file:
+        json.dump(discarded_dp.append(x), json_file, indent=1) 
 
+def validate(x):
     missing_identity = [field for field in identity if field not in list(x.keys())]
     missing_features = [field for field in features if field not in list(x.keys())]
 
     # Check is any identity field is missing or if any of them is nan.
-    if missing_identity or any(pd.isna(x.get(key)) for key in identity):
+    if missing_identity or any(pd.isna(x.get(key)) for key in identity + ['time']):
         time=x['time']
         print(f'Data point at time {time} misses essential fields. Discarded.')
+        update_counter(x)
+        save_disc_dp(x)
         return None # In this case the data point is discarder: its identity is unknown.
     # Check if all the features that the datapoint has are nan or missing.
     elif all(pd.isna(x.get(key)) for key in features):
         print(f'Data point {time} is useless becasue either all features are nan or missing. Discarded')
+        update_counter(x)
+        save_disc_dp(x)
         return None # Also in this case the data point is discarded since it doesn't even contain the least meaningful information.
+        
     else: # It means that the identity is well defined and at least one of the feature values is non nan --> the data point can be useful.
         for mf in missing_features:
             x[mf] = np.nan
 
     x = dict(OrderedDict((key, x[key]) for key in identity + features))
 
-    # Try to set the format of the 'time' field into the most used one (ISO 8601 format in UTC)
+    # Try to transform the timestamp into datetime
     try:
         date_obj = parser.parse(x['time'])
-        x['time'] = date_obj.replace(tzinfo=timezone.utc).isoformat(timespec='seconds')
+        x['time'] = date_obj.replace(tzinfo=timezone.utc)
     except Exception as e:
+        update_counter(x)
+        save_disc_dp(x)
         print("Invalid time format. Discarded data point.")
         return None
     
-    # Check if the features (min, max, sum, avg) sarisfy the basic logic rule min<=avg<=max<=sum
+    x, _=check_range(x)
+    
+    # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
     cc=check_f_consistency(x)
-    if not any(cc): #meaning that no feature respect the logic rule
+    if all(cc==False): #meaning that no feature respect the logic rule
         print(f'The data point at time {time} is too much compromised. Discarded')
+        update_counter(x)
+        save_disc_dp(x)
         return None #discard the datapoint: too much compromised.
-    else:
+    elif any(cc==False): #at least one feature value doesn't behave as it should
+        update_counter(x)
+        save_disc_dp(x)
         for f, c in zip(features, cc):
             if c==False:
                 x[f]=np.nan
     #print(f'data point after validation: {x}')
+    # if the data points arrives till here it means that it is ok from the format, logical and range point of view --> if it has nans it means that it has meet some non serious problems that could have lead to the discard.
+    if any(np.isnan(value) for value in [x.get(key) for key in features]):
+        update_counter(x)
+    else: 
+        #it means that the data point is perfect
+        update_counter(x, True)
     return x
 
-# ______________________________________________________________________________________________
-# This function is an exemplified version of a set of checks regarding the range that the data 
-# point value can assume. In first analysis we have considered the kpi to have an expected range
-# that is common to all machines. Further improvement may involve define expected ranges specific
-# for the machine_type. It will return True if the range is appropriate (passed check) and False 
-# otherwise.
-
 def check_range(x):
+    # Check range
     flag=True
-    if x: # Check the range only if the validation has not discarded the data point.
-        l_thr=kpi[x['kpi']][0][0]
-        h_thr=kpi[x['kpi']][0][1]
-        for k in list(x.keys())[-5:] :
-            if x[k]<l_thr:
-                x[k]=np.nan
-                flag=False
-        if x['max']>h_thr:
-            x['max']=np.nan
+
+    l_thr=kpi[x['kpi']][0][0]
+    h_thr=kpi[x['kpi']][0][1]
+    for k in [x.get(key) for key in features]:
+        if x[k]<l_thr:
+            x[k]=np.nan
             flag=False
-        if all(np.isnan(value) for value in [x.get(key) for key in features]):
-            return None
-        else:
-            return x, flag
+        if k in ['avg', 'max', 'min'] and x[k]>h_thr:
+            x[k]=np.nan
+            flag=False
+    # if after checking the range all features are nan, discard.
+    if all(np.isnan(value) for value in [x.get(key) for key in features]):
+        update_counter(x)
+        save_disc_dp(x)
+        return None
+    else:
+        return x, flag
     
+    #in this function, if the data is invalid the fact that it returns None is an indicator itself.
+
+
 # ______________________________________________________________________________________________
 # This function is the one that phisically make the imputation for a specific feature of the data point. 
 # It receives in input the univariate batch that needs to use and according to the required number of data
@@ -148,22 +171,15 @@ def predict_missing(batch):
 # ______________________________________________________________________________________________
 # This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
 
-def imputer(x, im):
+def imputer(x):
     if x:
         x=x[0] #Because checked data will return two values (the data point and the result of the check)
-        nan_cons_thr=3
 
         # Try imputation with mean or the HWES model.
         for f in features:
-            batch = im.get_batch(x, f)
+            batch = get_batch(x, f)
             if pd.isna(x[f]):
-                    counter=im.update_counter(x, f)
                     x[f]=predict_missing(batch)
-            else: 
-                counter=im.update_counter(x, f, True)
-            if counter>nan_cons_thr:
-                point_id='/'.join(map(str, list(x.values())[1:5]+list([f])))
-                print("!!!!!!!!!!!!!!!!!!!!!!!! ___________ It's been " + str(counter) + ' days that [' + str(point_id) + '] is missing ____________ !!!!!!!!!!!!!!!!!!!!!!!!!!!')
         #print(f'after imputation dp: {x}')
 
         # Check again the consistency of features and the range.
@@ -172,7 +188,7 @@ def imputer(x, im):
         else:  # It means that the imputed data point has not passed the check on the features and on their expected range.
             # In this case we use the LVCF as a method of imputation since it ensures the respect of these conditiono (the last point in the batch has been preiovusly checked)
             for f in features:
-                batch=im.get_batch(x, f)
+                batch = get_batch(x, f)
                 x[f]=batch[-1]
 
         #print(f'after check again dp: {x}')
@@ -180,27 +196,34 @@ def imputer(x, im):
         # In the end update batches with the new data point
         for f in features:
             #print(f'original batch {f}: {im.get_batch(x, f)}')
-            im.update_batch(x, f, x[f])
+            update_batch(x, f, x[f])
             #print(f'batch after update {f}: {im.get_batch(x, f)}')
 
         return x
 
 # ______________________________________________________________________________________________
 # This function implements all the steps needed for the cleaning in order to fuse the cleaning into one code line.
-def cleaning_pipeline(x, im):
-    validated_dp=validate_format(x)
-    checked_dp=check_range(validated_dp)
-    cleaned_dp=imputer(checked_dp, im)
-    # if cleaned_dp is None: #just for visualization purposes
-    #     cleaned_dp={}
-    #     cleaned_dp['time']=x['time']
-    #     cleaned_dp['asset_id']=x['asset_id']
-    #     cleaned_dp['name']=x['name']
-    #     cleaned_dp['kpi']=x['kpi']
-    #     cleaned_dp['min']=0
-    #     cleaned_dp['avg']=0
-    #     cleaned_dp['max']=0
-    #     cleaned_dp['sum']=0
-    #     cleaned_dp['var']=0
+def cleaning_pipeline(x):
+    old_counter=get_counter(x)
+    validated_dp=validate(x)
+    new_counter=get_counter(x)
+    if new_counter==old_counter+1 and new_counter>=faulty_aq_tol:
+        id = {key: x[key] for key in identity if key in x}
+        print(f"it has been {new_counter} days up to now that {id} reports problem in the acquisition! Check it out!") #generate the alert: it has been new_counter days that x[identity] has problems with the acquisition.
+    cleaned_dp=imputer(validated_dp)
+
     return cleaned_dp
 
+#test with this:
+# dp={
+#     'time': datetime.now(),
+#     'asset_id':  'ast-yhccl1zjue2t',
+#     'name': 'metal_cutting',
+#     'kpi': 'time',
+#     'operation': 'working',
+#     'sum': 10,
+#     'avg': 3,
+#     'min': 1,
+#     'max': np.nan,
+#     'var': 4}
+#it should alert that there is a problem in the acquisition but the point is still cleaned.
