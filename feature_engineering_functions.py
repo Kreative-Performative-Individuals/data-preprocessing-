@@ -261,10 +261,10 @@ def seasonal_additive_decomposition(dataframe, period):
         decomposition = seasonal_decompose(series, model='additive', period=period)
 
         #Plot the decomposition
-        plt.figure(figsize=(10, 8))
-        decomposition.plot()
-        plt.suptitle(f'Classical Decomposition of Time Series', fontsize=16)
-        plt.show()
+        #plt.figure(figsize=(10, 8))
+       # decomposition.plot()
+        #plt.suptitle(f'Classical Decomposition of Time Series', fontsize=16)
+        #plt.show()
 
         # Access the individual components
         trend = decomposition.trend

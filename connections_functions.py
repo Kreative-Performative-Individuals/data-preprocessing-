@@ -55,6 +55,11 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
         data = json.load(json_file)
     
     historical_data=pd.DataFrame(data[0])
+
+    if timestamp_start == None and timestamp_end ==None:
+        timestamp_start = historical_data['time'][ len(historical_data['time']) - 50]
+        timestamp_end = historical_data['time'][ len(historical_data['time']) - 1]
+
     i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
     i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
     historical_data= historical_data[
@@ -75,7 +80,11 @@ def send_alert(anomaly_identity):
 
 
 def store_datapoint(new_datapoint):
-    new_datapoint.to_json('new_datapoint.json', orient='records', lines=True)
-    # In some manner gives the new_datapoint dictionary to the database, so they can store it
+    # Write the list of dictionaries to a JSON file
+    with open('new_datapoint.json', 'w') as f:
+        for record in new_datapoint:
+            json.dump(record, f)
+            f.write("\n")  # Write each record on a new line (for 'lines=True' style)
+        # In some manner gives the new_datapoint dictionary to the database, so they can store it
 
     return None

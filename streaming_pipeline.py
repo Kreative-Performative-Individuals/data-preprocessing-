@@ -16,17 +16,16 @@ while True: #loops continuosly
 
     #first we call get_datapoint and we wait for a new input to arrive
     new_datapoint = get_datapoint(10) ## CONNECTION WITH API
-    print(new_datapoint)
+
     #once the new data point is aquired we clean it
     cleaned_datapoint = cleaning_pipeline(new_datapoint)
 
     #we now check if some drift has been detected
     drift_flag=ADWIN_drift(cleaned_datapoint)
 
-    
     #we call the database to extract historical data
-    historical_data = get_historical_data(cleaned_datapoint['name'], cleaned_datapoint['asset_ID'], cleaned_datapoint['kpi'], cleaned_datapoint['operation'], None, None) ## CONNECTION WITH API
-    historical_data = historical_data.drop(columns=['anomaly'])
+    historical_data = get_historical_data(cleaned_datapoint['name'], cleaned_datapoint['asset_id'], cleaned_datapoint['kpi'], cleaned_datapoint['operation'], None , None) ## CONNECTION WITH API
+    
 
     if drift_flag==True:
 
@@ -48,7 +47,5 @@ while True: #loops continuosly
         anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
         
         _ = send_alert(anomaly_identity)
-    
-
     
     _ = store_datapoint(cleaned_datapoint) ## CONNECTION WITH API
