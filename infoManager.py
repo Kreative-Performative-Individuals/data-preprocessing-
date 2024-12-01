@@ -6,6 +6,7 @@ identity=['asset_id', 'name', 'kpi', 'operation']
 features=['sum', 'avg', 'min', 'max', 'var']
 store_path="store_info.json"
 discarded_path='discarded_dp.json'
+data_path='synthetic_data.json'
 b_length=40
 faulty_aq_tol=3
 
