@@ -44,8 +44,9 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
     "timestamp_end": timestamp_end}
     # Send the GET request
     response = requests.get(url_db + "historical_data", params=params)
+    print(response)
 
-    return filtered_dataframe 
+    return response 
 
 
 def send_alert(anomaly_identity):
