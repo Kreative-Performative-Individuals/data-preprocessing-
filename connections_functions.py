@@ -32,6 +32,19 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
     #Maybe we can define that if we give timestap_start = None, timestamp_end = None,
     #they have to return us x values in the past starting from the last stored point
 
+    url_db = "http://localhost:8000/"
+    #Use this URL if you are connecting from the compose.
+    #url_db = "http://db:8000/"
+    params = {
+    "machine_name": machine_name,
+    "asset_id": asset_id,
+    "kpi": kpi,
+    "operation": operation,
+    "timestamp_start": timestap_start,
+    "timestamp_end": timestamp_end}
+    # Send the GET request
+    response = requests.get(url_db + "historical_data", params=params)
+
     return filtered_dataframe 
 
 
