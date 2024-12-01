@@ -1,2 +1,12 @@
 fastapi
 uvicorn
+river
+numpy
+pandas
+statsmodels
+python-dateutil
+matplotlib
+scikit-learn
+keras
+tensorflow
+optuna

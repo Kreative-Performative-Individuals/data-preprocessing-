@@ -127,7 +127,8 @@ def feature_engineering_pipeline(dataframe, kwargs):
 
 def extract_features(kpi_name, machine_name, operation_name, data):
 
-  filtered_data = data[(data["name"] == machine_name) & (data["kpi"] == kpi_name)] & (data["operation"] == operation_name)]
+  filtered_data = data[(data["name"] == machine_name) & (data["kpi"] == kpi_name) & (data["operation"] == operation_name)]
+
   filtered_data['time'] = pd.to_datetime(filtered_data['time'])
   filtered_data = filtered_data.sort_values(by='time')
 
