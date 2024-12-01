@@ -57,16 +57,18 @@ times = pd.date_range(
 # Create a DataFrame with the time index
 historical_data = {
     'time': times[window_size:-window_size].astype(str).tolist(),
-    'asset_id':  id['asset_id'],
-    'name': id['name'],
-    'kpi': id['kpi'],
-    'operation': id['operation'],
+    'asset_id':  [id['asset_id']] * len(times[window_size:-window_size]),  # Added asset_id column
+    'name': [id['name']] * len(times[window_size:-window_size]),  # Added name column
+    'kpi': [id['kpi']] * len(times[window_size:-window_size]),  # Added kpi column
+    'operation': [id['operation']] * len(times[window_size:-window_size]),  # Added operation column
     'sum': normal_data[0][window_size:-window_size].tolist(),
     'avg': normal_data[1][window_size:-window_size].tolist(),
     'min': normal_data[2][window_size:-window_size].tolist(),
     'max': normal_data[3][window_size:-window_size].tolist(),
     'var': normal_data[4][window_size:-window_size].tolist(), 
-    'anomaly': anomaly_status[window_size:-window_size]}
+    'anomaly': anomaly_status[window_size:-window_size]
+}
+
 
 # import matplotlib.pyplot as plt
 # plt.figure(figsize=(10, 6))
@@ -147,19 +149,20 @@ times = pd.date_range(
     tz=timezone.utc  # Set timezone
 )
 
+
 # Create a DataFrame with the time index
 stream_data = {
     'time': times[window_size:-window_size].astype(str).tolist(),
-    'asset_id':  id['asset_id'],
-    'name': id['name'],
-    'kpi': id['kpi'],
-    'operation': id['operation'],
+    'asset_id':  [id['asset_id']] * len(times[window_size:-window_size]),  # Added asset_id column
+    'name': [id['name']] * len(times[window_size:-window_size]),  # Added name column
+    'kpi': [id['kpi']] * len(times[window_size:-window_size]),  # Added kpi column
+    'operation': [id['operation']] * len(times[window_size:-window_size]),  # Added operation column
     'sum': normal_data[0][window_size:-window_size].tolist(),
     'avg': normal_data[1][window_size:-window_size].tolist(),
     'min': normal_data[2][window_size:-window_size].tolist(),
     'max': normal_data[3][window_size:-window_size].tolist(),
-    'var': normal_data[4][window_size:-window_size].tolist()}
-
+    'var': normal_data[4][window_size:-window_size].tolist()
+}
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 6))

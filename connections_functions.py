@@ -10,11 +10,11 @@ def get_datapoint(i):
         stream_data=data[1]
     i=10
     datapoint = {
-    'timestamp': stream_data['time'][i],
-    'isset_id': stream_data['time'][i],
-    'name': stream_data['time'][i],
-    'kpi': stream_data['time'][i],
-    'operation': stream_data['time'][i],
+    'time': stream_data['time'][i],
+    'asset_id': stream_data['asset_id'][i],
+    'name': stream_data['name'][i],
+    'kpi': stream_data['kpi'][i],
+    'operation': stream_data['operation'][i],
     'sum': stream_data['sum'][i], 
     'avg': stream_data['avg'][i],
     'min': stream_data['min'][i],

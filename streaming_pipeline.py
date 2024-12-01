@@ -15,8 +15,8 @@ ad=AnomalyDetector()
 while True: #loops continuosly
 
     #first we call get_datapoint and we wait for a new input to arrive
-    new_datapoint = get_datapoint() ## CONNECTION WITH API
-
+    new_datapoint = get_datapoint(10) ## CONNECTION WITH API
+    print(new_datapoint)
     #once the new data point is aquired we clean it
     cleaned_datapoint = cleaning_pipeline(new_datapoint)
 
