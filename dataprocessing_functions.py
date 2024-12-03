@@ -7,8 +7,7 @@ import pandas as pd
 from matplotlib import pyplot as plt 
 import json
 from collections import OrderedDict, deque
-from dateutil import parser
-from datetime import timezone, datetime
+from datetime import datetime
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -20,7 +19,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from river import drift
 import optuna
-from connections_functions import send_alert
+from connections_functions import send_alert, store_datapoint
 
 
 ''''
@@ -31,6 +30,7 @@ ________________________________________________________________________________
 ''' In this code we stored the functions that were used in the info manager section of the
 preprocessing pipeline, including a brief description of their inputs, outputs and functioning'''
 
+fields = ['time', 'asset_id', 'name', 'kpi', 'operation', 'sum', 'avg', 'min', 'max', 'var']
 identity=['asset_id', 'name', 'kpi', 'operation']
 features=['sum', 'avg', 'min', 'max', 'var']
 store_path="store.json"
@@ -211,87 +211,81 @@ def save_disc_dp(x):
         json.dump(discarded_dp.append(x), json_file, indent=1) 
 
 def validate(x):
-    missing_identity = [field for field in identity if field not in list(x.keys())]
-    missing_features = [field for field in features if field not in list(x.keys())]
 
-    # Check is any identity field is missing or if any of them is nan.
-    if missing_identity or any(pd.isna(x.get(key)) for key in identity + ['time']):
-        time=x['time']
-        print(f'Data point at time {time} misses essential fields. Discarded.')
+    for f in fields:
+        x.setdefault(f, np.nan) #if some fields is missing from the expected ones, put a nan
+    x = dict(OrderedDict((key, x[key]) for key in fields)) # order the fields of the datapoint
+
+    # Ensure the reliability of the field time
+    if np.isnan(x['time']):
+        x['time'] = datetime.now()
+
+    # Check that there is no missing information in the identity of the datapoint, otherwise we store in the database, labelled 'Corrupted'.
+    if any(pd.isna(x.get(key)) for key in identity):
         update_counter(x)
-        save_disc_dp(x)
-        return None # In this case the data point is discarder: its identity is unknown.
+        x['status']='Corrupted'
+        store_datapoint(x)
+        return None
     # Check if all the features that the datapoint has are nan or missing.
     elif all(pd.isna(x.get(key)) for key in features):
-        print(f'Data point {time} is useless becasue either all features are nan or missing. Discarded')
         update_counter(x)
-        save_disc_dp(x)
-        return None # Also in this case the data point is discarded since it doesn't even contain the least meaningful information.
-        
-    else: # It means that the identity is well defined and at least one of the feature values is non nan --> the data point can be useful.
-        for mf in missing_features:
-            x[mf] = np.nan
-
-    x = dict(OrderedDict((key, x[key]) for key in identity + features))
-
-    # Try to transform the timestamp into datetime
-    try:
-        date_obj = parser.parse(x['time'])
-        x['time'] = date_obj.replace(tzinfo=timezone.utc)
-    except Exception as e:
-        update_counter(x)
-        save_disc_dp(x)
-        print("Invalid time format. Discarded data point.")
+        x['status']='Corrupted'
+        store_datapoint(x)
         return None
     
-    x, _=check_range(x)
-    flag=True
-    # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
-    cc=check_f_consistency(x)
-    if all(cc==False): #meaning that no feature respect the logic rule
-        print(f'The data point at time {time} is too much compromised. Discarded')
-        update_counter(x)
-        save_disc_dp(x)
-        return None #discard the datapoint: too much compromised.
-    elif any(cc==False): #at least one feature value doesn't behave as it should
-        update_counter(x)
-        flag=False
-        save_disc_dp(x) # controlla !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        for f, c in zip(features, cc):
-            if c==False:
-                x[f]=np.nan
-    #print(f'data point after validation: {x}')
-    # if the data points arrives till here it means that it is ok from the format, logical and range point of view --> if it has nans it means that it has meet some non serious problems that could have lead to the discard.
-    if any(np.isnan(value) for value in [x.get(key) for key in features]):
-        if flag==True:
+    #if the datapoint comes here it means that it didn't miss any information about the identity and at least one feature that is not nan.
+
+    x, _=check_range(x) # the flag is to take trace if the datapoint has naturally nans or nans are the result of validation checks.
+
+    #if the datapoint comes here it means that at least one feature value is respecting the range constraint for the specific kpi.
+    if x:
+        # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
+        cc=check_f_consistency(x)
+        if all(cc==False): #meaning that no feature respect the logic rule
             update_counter(x)
-    else: 
-        #it means that the data point is perfect
-        update_counter(x, True)
-    return x
+            x['status']='Corrupted'
+            store_datapoint(x)
+            return None
+        elif all(cc==True): #the datapoint verifies the logic rule.
+                            #if now there is a nan it could be either the result of the range check or that the datapoint intrinsically has these nans.
+            if any(np.isnan(value) for value in [x.get(key) for key in features]):
+                update_counter(x)
+            else: #it means that the datapoint is consistent and it doesn't have nan values --> it is perfect.
+                update_counter(x, True) #reset the counter.
+        else: #it means that some feature are consistent and some not. Put at nan the not consistent ones.
+            update_counter(x)
+            for f, c in zip(features, cc):
+                if c==False:
+                    x[f]=np.nan
+
+        return x
+
+
 
 def check_range(x):
-    # Check range
-    flag=True
+    flag=True #takes trace of: has the datapoint passed the range check without being changed?
 
+    #Retrieve the specific range for the kpi that we are dealing with
     l_thr=kpi[x['kpi']][0][0]
     h_thr=kpi[x['kpi']][0][1]
-    for k in [x.get(key) for key in features]:
+
+    for k in features:
         if x[k]<l_thr:
             x[k]=np.nan
             flag=False
-        if k in ['avg', 'max', 'min'] and x[k]>h_thr:
+        if k in ['avg', 'max', 'min', 'var'] and x[k]>h_thr:
             x[k]=np.nan
             flag=False
-    # if after checking the range all features are nan, discard.
+
+    # if after checking the range all features are nan --> corrupted
     if all(np.isnan(value) for value in [x.get(key) for key in features]):
         update_counter(x)
-        save_disc_dp(x)
+        x['status']='Corrupted'
+        store_datapoint(x)
         return None
     else:
         return x, flag
-    
-    #in this function, if the data is invalid the fact that it returns None is an indicator itself.
+
 
 
 # ______________________________________________________________________________________________
@@ -302,19 +296,16 @@ def check_range(x):
 def predict_missing(batch):
     seasonality=7
     cleaned_batch= [x for x in batch if not np.isnan(x)]
-    #print(cleaned_batch)
     if not(all(pd.isna(x) for x in batch)) and batch:
         if len(cleaned_batch)>2*seasonality:
-            #print('**Use Exp Smoothing for prediction**')
             model = ExponentialSmoothing(cleaned_batch, seasonal='add', trend='add', seasonal_periods=seasonality)
             model_fit = model.fit()
             prediction = model_fit.forecast(steps=1)[0]
         else:
-            #print('**Use mean for prediction**')
             prediction=np.nanmean(batch)
         return prediction
     else: 
-        return np.nan # Leave the feature as nan since we don't have any information in the batch to make the imputation.
+        return np.nan # Leave the feature as nan since we don't have any information in the batch to make the imputation. If the datapoint has a nan because the feature is not definable for it, it will be leaved as it is from the imputator.
 
 # ______________________________________________________________________________________________
 # This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
@@ -328,7 +319,6 @@ def imputer(x):
             batch = get_batch(x, f)
             if pd.isna(x[f]):
                     x[f]=predict_missing(batch)
-        #print(f'after imputation dp: {x}')
 
         # Check again the consistency of features and the range.
         if check_f_consistency(x) and check_range(x)[1]:
@@ -338,19 +328,16 @@ def imputer(x):
             for f in features:
                 batch = get_batch(x, f)
                 x[f]=batch[-1]
-
-        #print(f'after check again dp: {x}')
         
         # In the end update batches with the new data point
         for f in features:
-            #print(f'original batch {f}: {im.get_batch(x, f)}')
             update_batch(x, f, x[f])
-            #print(f'batch after update {f}: {im.get_batch(x, f)}')
 
         return x
 
 # ______________________________________________________________________________________________
 # This function implements all the steps needed for the cleaning in order to fuse the cleaning into one code line.
+
 def cleaning_pipeline(x):
     old_counter=get_counter(x)
     validated_dp=validate(x)
@@ -431,35 +418,39 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 # take a single data point in input and return the prediction.
 
 
-class AnomalyDetector:
-    def __init__(self):
-        self.features=['sum', 'avg', 'min', 'max', 'var']
-        
-    def train(self, hist_ts):
-        train_set=pd.DataFrame(hist_ts)[self.features]
-        s=[]
-        cc=np.arange(0.01, 0.5, 0.01)
-        for c in cc:
-            model = IsolationForest(n_estimators=200, contamination=c)
-            an_pred=model.fit_predict(train_set)
-            s.append(silhouette_score(train_set, an_pred))
-        optimal_c=cc[np.argmax(s)]
-        #print(optimal_c)
-        model = IsolationForest(n_estimators=200, contamination=optimal_c)
-        model.fit_predict(train_set)
-        return model 
-    
-    def predict(self, x, model):
-        dp=pd.DataFrame(x[self.features]).T
-        anomaly=model.predict(dp)
-        if anomaly==-1:
-            anomaly='Anomaly'
-        else:
-            anomaly='Normal'
-        return 
+def ad_train(historical_data):
+    #account also for the case in which one feature may not be definable for a kpi
+    nan_columns = historical_data.columns[historical_data.isna().all()]
+    historical_data = historical_data.drop(columns=nan_columns)
+
+    train_set=pd.DataFrame(historical_data)[features]
+    s=[]
+    cc=np.arange(0.01, 0.5, 0.01)
+    for c in cc:
+        model = IsolationForest(n_estimators=200, contamination=c)
+        an_pred=model.fit(train_set)
+        s.append(silhouette_score(train_set, an_pred))
+    optimal_c=cc[np.argmax(s)]
+    model = IsolationForest(n_estimators=200, contamination=optimal_c)
+    model.fit_predict(train_set)
+    return model 
+
+def ad_predict(x, model):
+    #account for the case in which one feature may be nan also after the imputation since the feature is not definable for that kpi.
+    dp=pd.DataFrame(x[features]).T
+    nan_columns = dp.columns[dp.isna().all()]
+    dp = dp.drop(columns=nan_columns)
+
+    status=model.predict(dp)
+    anomaly_probability = 1 / (1 + np.exp(-model.decision_function(dp)))
+    if status==-1:
+        status='Anomaly'
+    else:
+        status='Normal'
+    return x, anomaly_probability
 ''''
 ________________________________________________________________________________________________________
-FUNCTIONS FOR FEATURES ENGINEERING
+FUNCTIONS FOR FEATURE ENGINEERING
 ________________________________________________________________________________________________________
 '''
 ''' In this code we stored the functions that were used in the feature engineering section of the

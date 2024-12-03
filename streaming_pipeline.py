@@ -1,5 +1,5 @@
 from dataprocessing_functions  import cleaning_pipeline
-from dataprocessing_functions  import AnomalyDetector
+from dataprocessing_functions  import ad_predict, ad_train
 from dataprocessing_functions  import ADWIN_drift
 from dataprocessing_functions import tdnn_forecasting_training, tdnn_forecasting_prediction
 from dataprocessing_functions import  feature_engineering_pipeline
@@ -9,7 +9,6 @@ from connections_functions import get_datapoint, get_historical_data, send_alert
 
 
 #initializing the anomaly detector
-ad=AnomalyDetector()
 
 while True: #loops continuosly
 
@@ -29,7 +28,7 @@ while True: #loops continuosly
     if drift_flag==True:
 
         #retrain anomaly detection model
-        model=ad.train(historical_data) #Here we should put the get_historical_data()
+        model=ad_train(historical_data) #Here we should put the get_historical_data()
         update_model_ad(cleaned_datapoint, model)
 
         #retrain forecasting algorithm model
@@ -40,9 +39,9 @@ while True: #loops continuosly
     # get de model    
     ad_model= get_model_ad(cleaned_datapoint)
     #predict class
-    cleaned_datapoint['anomaly']=ad.predict(cleaned_datapoint , ad_model)
+    cleaned_datapoint['status'], anomaly_score=ad_predict(cleaned_datapoint , ad_model)
 
-    if cleaned_datapoint['anomaly']=="Anomaly":
+    if cleaned_datapoint['status']=="Anomaly":
         anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
         
         send_alert(anomaly_identity, 'Anomaly')

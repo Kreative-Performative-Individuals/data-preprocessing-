@@ -72,13 +72,13 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
 ]
     return historical_data
 
-def send_alert(identity, type, counter=None): #the identity returns the type of Kpi and machine for which the anomaly/nan values
+def send_alert(identity, type, counter=None, probability=None): #the identity returns the type of Kpi and machine for which the anomaly/nan values
                                         # have been detected, type is 'Anomaly' or 'Nan', counter (is the number of consecutive days in
                                         # which we have detected nan) is None if type = 'Anomaly'
     if type == 'Anomaly':
-        alert = f"Alert anomaly in {identity[1]} - {identity[0]} - {identity[2]} - {identity[3]}!"
+        alert = f"Alert anomaly in {identity['name']} - {identity['asset_id']} - {identity['kpi']} - {identity['operation']}! The probability that this anomaly is correct is {probability}."
     else: 
-        alert = f"It has been {counter} days that {identity[1]} - {identity[0]} returns NaN values in {identity[2]} - {identity[3]}. ...
+        alert = f"It has been {counter} days that {identity['name']} - {identity['isset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. ...
           Possible malfunctioning either in the acquisition system or in the machine!"
 
     # Insert the part to send the alert to GUI for the screen visualization to the user
