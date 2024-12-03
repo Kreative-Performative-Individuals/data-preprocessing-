@@ -8,7 +8,7 @@ from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from collections import OrderedDict
 from dateutil import parser
 from datetime import timezone, datetime
-from infoManager import features, identity, kpi, faulty_aq_tol, get_batch, update_counter, update_batch, get_counter, discarded_path
+from exploration_documents.infoManager import features, identity, kpi, faulty_aq_tol, get_batch, update_counter, update_batch, get_counter, discarded_path
 import json
 
 ''''

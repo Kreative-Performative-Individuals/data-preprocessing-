@@ -1,4 +1,4 @@
-from infoManager import machine, kpi, store_path, discarded_path
+from dataprocessing_functions import machine, kpi, store_path, discarded_path
 import json
 
     # Dictionary used to mantain a local version of the original kpis in order to handle the specific batches useful for the imputation and the data drift analysis.

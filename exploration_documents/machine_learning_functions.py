@@ -1,6 +1,6 @@
 from river import drift
 import pandas as pd
-from infoManager import features, identity, b_length, get_batch
+from exploration_documents.infoManager import features, identity, b_length, get_batch
 
 ''''
 ________________________________________________________________________________________________________

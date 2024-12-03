@@ -1,4 +1,4 @@
-from infoManager import data_path
+from dataprocessing_functions import data_path
 import json
 import pandas as pd
 
