@@ -86,8 +86,6 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
 
 def store_datapoint(new_datapoint):
     # Write the list of dictionaries to a JSON file
-    with open('new_datapoint.json', 'w') as f:
-        for record in new_datapoint:
-            json.dump(record, f)
-            f.write("\n")  # Write each record on a new line (for 'lines=True' style)
+    with open('new_datapoint.json', "w") as json_file:
+        json.dump(new_datapoint, json_file, indent=1) 
         # In some manner gives the new_datapoint dictionary to the database, so they can store it
