@@ -1,18 +1,21 @@
-# data-preprocessing-
+# Data preprocessing block
 
 In the repository you will find several documents. 
 
+The main files used for running the pipeline are streaming_pipeline.py and on_request_pipeline.py. 
+
+streaming_pipeline.py is presenting a while loop, so it's continuosly running when the application is started and performs the cleaning and storing of new streaming data.
+
+on_request_pipeline.py presents the pipeline that starts whenever a request for forecasting or feature engineering is received and ends when the result is delivered to requester.
+
+On connections_functions.py there are all the necessary connections to other engines of the application that are required to efficiently run the pipelines, there you can find get_datapoint(.) (for the moment is a mockup of the streaming), get_historical_data(.), send_alert(.) and store_datapoint(.).
+
+dataprocessing_functions.py on other side contains the main functions and classes of the data processing block, like for example data_cleaning(.), ADWIN_drift(.), AnomalyDetector (), feature_engineering_pipeline(.), tdnn_forecasting_prediction(.).., and all their subfunctions.
+
 smart_app_data.pkl is the dataset that was provided to us.
 
-In pipeline_prototype you will find a prototype of the pipeline that is not functional yet, but it represents the workflow for the cleaning, data transformation and ML implementation. It also simulate the data ingestion, for testing with both data coming from the dataset or random generated. 
+synthetic_data.json and store.json are instead mockup data that we use to simulate the streaming data and the historical data.
 
-In information.py the fundamental information about the dataset itself (comprending the machines, kpis, values and operations), as well as information about how to preprocess each kpi are stored. This file is also the one that allow to store the dictionaries for the extraction of the batches and models that will be generated and used along the pipeline implementation.
-
-In data_cleaning_functions the functions that are used in the data cleaning step of the pipeline are implemented, their functioning was tested on simulation data.
-
-In feature_engineering_functions the functions that are used in the feature engineering step of the pipeline are implemented, their functioning was tested on simulation data. Note that how it is implemented right now is to perform the data transformation as a previous step to the machine learning, but the same functions can be used to generate new features.
-
-In machine_learning_functions the functions that are used in the machine learning step are implemented, their functioning was tested on simulation data. They include the drift, the anomaly detection and the forecasting algorithm. Future developments will include the creation of new features.
-
+Other documents are related to the API connections, explainability and security controls.
 
 In the folder exploration documents that are used for the test of the function or the exploration of data are stored.
