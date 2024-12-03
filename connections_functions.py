@@ -56,7 +56,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     
     historical_data=pd.DataFrame(data[0])
 
-    if timestamp_start == None and timestamp_end ==None:
+    if timestamp_start == -1 and timestamp_end ==-1:
         timestamp_start = historical_data['time'][ len(historical_data['time']) - 50]
         timestamp_end = historical_data['time'][ len(historical_data['time']) - 1]
 

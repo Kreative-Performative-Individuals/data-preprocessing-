@@ -19,7 +19,7 @@ def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestam
         transformation_config['make_stationary'] = True
         transformation_config['scaler'] = True
         
-        historical_data = get_historical_data(machine_name, asset_id, kpi, operation, None, None) ## CONNECTION WITH API
+        historical_data = get_historical_data(machine_name, asset_id, kpi, operation, -1, -1) ## CONNECTION WITH API
 
         transformed_data = feature_engineering_pipeline(historical_data, transformation_config)
 
