@@ -45,6 +45,6 @@ while True: #loops continuosly
     if cleaned_datapoint['anomaly']=="Anomaly":
         anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
         
-        _ = send_alert(anomaly_identity)
+        send_alert(anomaly_identity, 'Anomaly')
     
-    _ = store_datapoint(cleaned_datapoint) ## CONNECTION WITH API
+    store_datapoint(cleaned_datapoint) ## CONNECTION WITH API

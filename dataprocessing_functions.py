@@ -20,6 +20,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from river import drift
 import optuna
+from connections_functions import send_alert
 
 
 ''''
@@ -244,7 +245,7 @@ def validate(x):
         return None
     
     x, _=check_range(x)
-    
+    flag=True
     # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
     cc=check_f_consistency(x)
     if all(cc==False): #meaning that no feature respect the logic rule
@@ -254,14 +255,16 @@ def validate(x):
         return None #discard the datapoint: too much compromised.
     elif any(cc==False): #at least one feature value doesn't behave as it should
         update_counter(x)
-        save_disc_dp(x)
+        flag=False
+        save_disc_dp(x) # controlla !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         for f, c in zip(features, cc):
             if c==False:
                 x[f]=np.nan
     #print(f'data point after validation: {x}')
     # if the data points arrives till here it means that it is ok from the format, logical and range point of view --> if it has nans it means that it has meet some non serious problems that could have lead to the discard.
     if any(np.isnan(value) for value in [x.get(key) for key in features]):
-        update_counter(x)
+        if flag==True:
+            update_counter(x)
     else: 
         #it means that the data point is perfect
         update_counter(x, True)
@@ -354,7 +357,7 @@ def cleaning_pipeline(x):
     new_counter=get_counter(x)
     if new_counter==old_counter+1 and new_counter>=faulty_aq_tol:
         id = {key: x[key] for key in identity if key in x}
-        print(f"it has been {new_counter} days up to now that {id} reports problem in the acquisition! Check it out!") #generate the alert: it has been new_counter days that x[identity] has problems with the acquisition.
+        send_alert(id, 'Nan', new_counter)
     cleaned_dp=imputer(validated_dp)
 
     return cleaned_dp

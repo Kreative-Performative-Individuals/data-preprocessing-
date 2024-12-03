@@ -72,11 +72,16 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
 ]
     return historical_data
 
-def send_alert(anomaly_identity):
-    
-    # In some manner calls the alert function and sends the identity
+def send_alert(identity, type, counter=None): #the identity returns the type of Kpi and machine for which the anomaly/nan values
+                                        # have been detected, type is 'Anomaly' or 'Nan', counter (is the number of consecutive days in
+                                        # which we have detected nan) is None if type = 'Anomaly'
+    if type == 'Anomaly':
+        alert = f"Alert anomaly in {identity[1]} - {identity[0]} - {identity[2]} - {identity[3]}!"
+    else: 
+        alert = f"It has been {counter} days that {identity[1]} - {identity[0]} returns NaN values in {identity[2]} - {identity[3]}. ...
+          Possible malfunctioning either in the acquisition system or in the machine!"
 
-    return None
+    # Insert the part to send the alert to GUI for the screen visualization to the user
 
 
 def store_datapoint(new_datapoint):
@@ -86,5 +91,3 @@ def store_datapoint(new_datapoint):
             json.dump(record, f)
             f.write("\n")  # Write each record on a new line (for 'lines=True' style)
         # In some manner gives the new_datapoint dictionary to the database, so they can store it
-
-    return None
