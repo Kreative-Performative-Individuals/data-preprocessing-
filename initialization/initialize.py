@@ -1,3 +1,5 @@
+import sys
+sys.path.append('C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-')
 from dataprocessing_functions import machine, kpi, store_path, discarded_path
 import json
 

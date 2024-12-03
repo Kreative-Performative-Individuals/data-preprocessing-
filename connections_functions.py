@@ -1,11 +1,10 @@
-from dataprocessing_functions import data_path
 import json
 import pandas as pd
 
 def get_datapoint(i):
     # In some manner receives data point as a dictionary of form
 
-    with open(data_path, "r") as json_file:
+    with open('synthetic_data.json', "r") as json_file:
         data = json.load(json_file)
         stream_data=data[1]
     i=10
@@ -78,8 +77,7 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
     if type == 'Anomaly':
         alert = f"Alert anomaly in {identity['name']} - {identity['asset_id']} - {identity['kpi']} - {identity['operation']}! The probability that this anomaly is correct is {probability}."
     else: 
-        alert = f"It has been {counter} days that {identity['name']} - {identity['isset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. ...
-          Possible malfunctioning either in the acquisition system or in the machine!"
+        alert = f"It has been {counter} days that {identity['name']} - {identity['isset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. Possible malfunctioning either in the acquisition system or in the machine!"
 
     # Insert the part to send the alert to GUI for the screen visualization to the user
 
