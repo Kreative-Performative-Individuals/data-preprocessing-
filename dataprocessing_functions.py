@@ -32,9 +32,8 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 fields = ['time', 'asset_id', 'name', 'kpi', 'operation', 'sum', 'avg', 'min', 'max', 'var']
 identity=['asset_id', 'name', 'kpi', 'operation']
 features=['sum', 'avg', 'min', 'max', 'var']
-store_path="store.json"
-discarded_path='discarded_dp.json'
-data_path='synthetic_data.json'
+store_path="C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\store.json"
+data_path="C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json"
 b_length=40
 faulty_aq_tol=3
 
@@ -93,7 +92,7 @@ def update_batch(x, f, p):
     if len(dq)>b_length:
         dq.popleft()
     # Store the new batch into the info dictionary.
-    info[x['name']][x['asset_id']][x['kpi']][x['operation']][0][features.index(f)]=dq
+    info[x['name']][x['asset_id']][x['kpi']][x['operation']][0][features.index(f)]= list(dq)
 
     with open(store_path, "w") as json_file:
         json.dump(info, json_file, indent=1) 
@@ -203,12 +202,6 @@ def check_f_consistency(x):
 # terms of format. In general, if the data point is too severly compromised (one of the identity fields is 
 # nan or missing, all features are nan), then it is discarded (return None).
 
-def save_disc_dp(x):
-    with open(discarded_path, "r") as json_file:
-        discarded_dp = json.load(json_file)
-    with open(discarded_path, "w") as json_file:
-        json.dump(discarded_dp.append(x), json_file, indent=1) 
-
 def validate(x):
 
     for f in fields:
@@ -240,23 +233,30 @@ def validate(x):
     if x:
         # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
         cc=check_f_consistency(x)
-        if all(cc==False): #meaning that no feature respect the logic rule
+        if all(not c for c in cc): #meaning that no feature respect the logic rule
             update_counter(x)
             x['status']='Corrupted'
             store_datapoint(x)
             return None
-        elif all(cc==True): #the datapoint verifies the logic rule.
+        elif all(c for c in cc): #the datapoint verifies the logic rule.
                             #if now there is a nan it could be either the result of the range check or that the datapoint intrinsically has these nans.
-            if any(np.isnan(value) for value in [x.get(key) for key in features]):
-                update_counter(x)
-            else: #it means that the datapoint is consistent and it doesn't have nan values --> it is perfect.
+            any_nan=False
+            for f in features:
+                if np.isnan(x[f]):
+                    any_nan=True
+                    if all(np.isnan(get_batch(x, f))):
+                        pass
+                    else:
+                        update_counter(x)
+                        break
+            if any_nan==False:
+                                 #it means that the datapoint is consistent and it doesn't have nan values --> it is perfect.
                 update_counter(x, True) #reset the counter.
         else: #it means that some feature are consistent and some not. Put at nan the not consistent ones.
-            update_counter(x)
             for f, c in zip(features, cc):
                 if c==False:
                     x[f]=np.nan
-
+            update_counter(x)
         return x
 
 
@@ -311,7 +311,9 @@ def predict_missing(batch):
 
 def imputer(x):
     if x:
-        x=x[0] #Because checked data will return two values (the data point and the result of the check)
+        if isinstance(x, tuple):
+            x = x[0]
+            #Because the validated datapoint may exit in the check range with 2 returned values.
 
         # Try imputation with mean or the HWES model.
         for f in features:

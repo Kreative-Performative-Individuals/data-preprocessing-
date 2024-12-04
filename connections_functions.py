@@ -4,7 +4,7 @@ import pandas as pd
 def get_datapoint(i):
     # In some manner receives data point as a dictionary of form
 
-    with open('synthetic_data.json', "r") as json_file:
+    with open("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
         stream_data=data[1]
     i=10
@@ -50,7 +50,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     #                                                                            'kpi': 'time',
     #                                                                            'operation': 'working'}
     # time should be expressed as: '2026-02-04 00:00:00+00:00' and they are available from 2023-05-20 to 2026-02-02
-    with open(data_path, "r") as json_file:
+    with open("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
     
     historical_data=pd.DataFrame(data[0])
@@ -77,7 +77,7 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
     if type == 'Anomaly':
         alert = f"Alert anomaly in {identity['name']} - {identity['asset_id']} - {identity['kpi']} - {identity['operation']}! The probability that this anomaly is correct is {probability}."
     else: 
-        alert = f"It has been {counter} days that {identity['name']} - {identity['isset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. Possible malfunctioning either in the acquisition system or in the machine!"
+        alert = f"It has been {counter} days that {identity['name']} - {identity['asset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. Possible malfunctioning either in the acquisition system or in the machine!"
 
     # Insert the part to send the alert to GUI for the screen visualization to the user
 
