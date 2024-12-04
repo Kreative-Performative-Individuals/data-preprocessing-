@@ -1,0 +1,2 @@
+transformed_df.json contains the original df of the professor adapted to the tassonomy that we use in the project
+transformation interrupted.json contains the the dataframe cleaned until the row i [df, i]

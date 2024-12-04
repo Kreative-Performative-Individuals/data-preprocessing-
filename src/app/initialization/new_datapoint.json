@@ -1,0 +1,13 @@
+{
+ "time": "2024-03-01T00:00:00Z",
+ "asset_id": "ast-ha448od5d6bd",
+ "name": "metal_cutting",
+ "kpi": "power",
+ "operation": "independent",
+ "sum": NaN,
+ "avg": NaN,
+ "min": NaN,
+ "max": NaN,
+ "var": NaN,
+ "status": "Corrupted"
+}
