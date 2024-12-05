@@ -4,7 +4,7 @@ import pandas as pd
 def get_datapoint(i):
     # In some manner receives data point as a dictionary of form
 
-    with open("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json", "r") as json_file:
+    with open("synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
         stream_data=data[1]
     i=10
@@ -50,7 +50,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     #                                                                            'kpi': 'time',
     #                                                                            'operation': 'working'}
     # time should be expressed as: '2026-02-04 00:00:00+00:00' and they are available from 2023-05-20 to 2026-02-02
-    with open("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json", "r") as json_file:
+    with open("synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
     
     historical_data=pd.DataFrame(data[0])

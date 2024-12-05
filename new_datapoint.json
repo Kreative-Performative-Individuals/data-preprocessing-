@@ -1,10 +1,12 @@
-"time"
-"asset_id"
-"name"
-"kpi"
-"operation"
-"sum"
-"avg"
-"min"
-"max"
-"var"
+{
+ "time": "2026-02-13 00:00:00+00:00",
+ "asset_id": "ast-yhccl1zjue2t",
+ "name": "metal_cutting",
+ "kpi": "time",
+ "operation": "working",
+ "sum": 63211.5773205567,
+ "avg": 29128.54986241151,
+ "min": 11810.18564874952,
+ "max": 47264.05612356254,
+ "var": 34504.2086164133
+}

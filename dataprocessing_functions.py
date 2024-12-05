@@ -16,9 +16,12 @@ from sklearn.metrics import silhouette_score
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
+from keras.models import model_from_json
 from river import drift
 import optuna
 from connections_functions import send_alert, store_datapoint
+import pickle
+import os
 
 
 ''''
@@ -32,8 +35,9 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 fields = ['time', 'asset_id', 'name', 'kpi', 'operation', 'sum', 'avg', 'min', 'max', 'var']
 identity=['asset_id', 'name', 'kpi', 'operation']
 features=['sum', 'avg', 'min', 'max', 'var']
-store_path="C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\store.json"
-data_path="C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json"
+store_path = "store.json"
+store_path_forecasting = "forecasting_models.pkl"
+data_path = "synthetic_data.json"
 b_length=40
 faulty_aq_tol=3
 
@@ -137,22 +141,91 @@ def update_model_ad(x, model):
 
 
 
-def get_model_forecast(x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
+'''def get_model_forecast(x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
     with open(store_path, "r") as json_file:
             info = json.load(json_file)
-    return info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]
+    return info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]'''
 
+def get_model_forecast(x):
+    # Load the Pickle file
+    with open(store_path_forecasting, "rb") as f:
+        all_models_data = pickle.load(f)
+    
+    # Navigate to the specific model based on the x keys
+    model_info = all_models_data[x['name']][x['asset_id']][x['kpi']][x['operation']]
 
+    models_for_subfeatures = {}
+    for sub_feature, data in model_info.items():
+        keras_model = model_from_json(data['model_architecture'])
+        keras_model.set_weights(data['model_weights'])
+        models_for_subfeatures[sub_feature] = [keras_model, data['params'], data['stats']]
+    
+    return models_for_subfeatures
 
-def update_model_forecast(x, model):
+'''def update_model_forecast(x, model):
     with open(store_path, "r") as json_file:
             info = json.load(json_file)
     info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]=model
     
     with open(store_path, "w") as json_file:
-        json.dump(info, json_file, indent=1) 
+        json.dump(info, json_file, indent=1) '''
 
+def update_model_forecast(x, model):
+    """
+    Update or store models, parameters, and stats in a Pickle file.
+    
+    Arguments:
+    - x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
+    - model: A dictionary where the keys are sub-features ('min', 'max', 'sum', 'avg') and 
+             the values are lists containing [keras_model, best_params, stats].
+    - store_path: The path where the Pickle file is stored.
+    
+    This function will either add new models or update existing ones in the Pickle file.
+    """
+    
+    # Load the existing data from the Pickle file if it exists
+    if os.path.exists(store_path_forecasting):
+        with open(store_path_forecasting, "rb") as f:
+            all_models_data = pickle.load(f)
+    else:
+        all_models_data = {}
 
+    # Navigate to the specific location in the dictionary based on 'x' keys
+    name = x['name']
+    asset_id = x['asset_id']
+    kpi = x['kpi']
+    operation = x['operation']
+    
+    # Check if the structure exists, if not, initialize it
+    if name not in all_models_data:
+        all_models_data[name] = {}
+    
+    if asset_id not in all_models_data[name]:
+        all_models_data[name][asset_id] = {}
+    
+    if kpi not in all_models_data[name][asset_id]:
+        all_models_data[name][asset_id][kpi] = {}
+    
+    if operation not in all_models_data[name][asset_id][kpi]:
+        all_models_data[name][asset_id][kpi][operation] = {}
+
+    # Now, for each sub-feature, add or update the model, params, and stats
+    for sub_feature, model_info in model.items():
+        keras_model, best_params, stats = model_info
+        
+        # Store model data in the dictionary
+        all_models_data[name][asset_id][kpi][operation][sub_feature] = {
+            'model_architecture': keras_model.to_json(),  # Store model architecture
+            'model_weights': keras_model.get_weights(),   # Store model weights
+            'params': best_params,                        # Store best parameters
+            'stats': stats                                # Store stats
+        }
+    
+    # Save the updated data back to the Pickle file
+    with open(store_path_forecasting, "wb") as f:
+        pickle.dump(all_models_data, f)
+
+    print(f"Models updated successfully in {store_path_forecasting}")
 
 ''''
 ________________________________________________________________________________________________________
@@ -468,7 +541,7 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 # It gives as an output the transformed time serie.
 
 def feature_engineering_pipeline(dataframe, kwargs):
-    features = ['sum', 'avg','min', 'max', 'var']
+    features = ['sum', 'avg','min', 'max']
     for feature_name in features:
         # Check if the column exists in the DataFrame
         if feature_name in dataframe.columns:
@@ -554,8 +627,10 @@ def feature_engineering_pipeline(dataframe, kwargs):
                     feature = (feature - np.mean(feature)) / np.std(feature)
             
             dataframe[feature_name] = feature
+    
+    result_dataframe = dataframe[['time']+features]
 
-    return dataframe
+    return result_dataframe
 # ______________________________________________________________________________________________
 # This function takes in input the kpi_name, machine_name, operation_name and the data and filter
 # the dataset for the given parameters. It returns the filtered data.
@@ -713,67 +788,6 @@ def seasonal_additive_decomposition(dataframe, period):
         return None  
 
 
-
-'''# ______________________________________________________________________________________________
-Function to implement if we want to allow decomposition having more than one seasonality
-
-def seasonal_stl_decomposition(dataframe, periods):
-    """
-    This function performs seasonal decomposition with STL (Seasonal and Trend decomposition using LOESS)
-    for detecting multiple seasonalities. It allows for decomposition of the series into trend, seasonal,
-    and residual components for each specified period of seasonality.
-
-    Args:
-    - dataframe (pandas.Series): The time series data.
-    - periods (list): A list of seasonal periods to consider for decomposition (e.g., [7, 365] for weekly and yearly seasonality).
-    
-    Returns:
-    - list of dicts: Each dict contains 'trend', 'seasonal', 'residual' components for each seasonality.
-    """
-    # Check if the DataFrame has enough data
-    if dataframe.empty:
-        print(f"No data found for the time series. Skipping decomposition.")
-        return None
-
-    # Drop NaN values
-    series = dataframe.dropna()
-
-    if len(series) < 2:  # Check if the series has at least 2 observations
-        print(f"Not enough data. Skipping decomposition.")
-        return None
-
-    # Store decomposition results for each period
-    decompositions = []
-
-    # Perform STL decomposition for each period in the list
-    for period in periods:
-        if len(series) < 2 * period:  # Ensure enough data for two full cycles for each seasonality
-            print(f"Not enough data for two full cycles of period {period}. Skipping decomposition.")
-            continue
-        
-        try:
-            # Apply STL decomposition
-            decomposition = sm.tsa.seasonal_decompose(series, model='additive', period=period)
-
-            # Store the decomposition results
-            decomposition_result = {
-                'period': period,
-                'trend': decomposition.trend,
-                'seasonal': decomposition.seasonal,
-                'residual': decomposition.resid
-            }
-            decompositions.append(decomposition_result)
-
-        except ValueError as e:
-            print(f"Error during decomposition with period {period}: {e}")
-            continue
-
-    # Return the decomposition results
-    if decompositions:
-        return decompositions
-    else:
-        print("No decompositions were successful.")
-        return None'''
 
 # ______________________________________________________________________________________________
 # This function allows to make a time series stationary whenever it is not. It receives as an 
@@ -967,7 +981,10 @@ def create_TDNN(hidden_units, lr):
     # - model: the model
     model = Sequential()
     model.add(Dense(hidden_units, activation='relu'))
+    #model.add(Dropout(0.2))
+    # model.batchnormalization ??
     model.add(Dense(hidden_units, activation='relu'))
+    #model.add(Dropout(0.2))
     model.add(Dense(hidden_units, activation='relu'))
     model.add(Dense(1))
     model.compile(loss='mean_squared_error', optimizer=Adam(lr))
@@ -1005,7 +1022,7 @@ def objective_TDNN(trial, time_series):
     # - val_loss: loss of the validation that we want to minimize
 
     # Set hyperparameters ranges
-    tau = trial.suggest_categorical('tau', [7 ,14 , 21])
+    tau = trial.suggest_categorical('tau', [8 ,15 , 22])
     epochs = trial.suggest_int('epochs', 50, 150, step=10)
     lr = trial.suggest_categorical('lr', [0.01, 0.001, 0.0001])
     hidden_units = trial.suggest_int('hidden_units', 50, 250)
@@ -1051,16 +1068,21 @@ def objective_TDNN(trial, time_series):
     return val_loss
 
 
-def tdnn_forecasting_training(time_series, n_trials=10):
+def tdnn_forecasting_training(series, n_trials=10):
     # Function that creates a study for hyperparameter optimization
     # and validates the TDNN using the best hyperparameters found
     # INPUT:
     # - time series: time series we want to train and find best model and hyperparameters
+    #                this series has a column 'time'
+    #                and a column with one of ['min', 'max', 'sum', 'avg']
     # - n_trials: number of trials for hyperparameter search
     # OUTPUT:
     # - best_model_TDNN: model of TDNN with best hyperparameters
     # - best_params: dictionary comprising best hyperparameters ['tau', 'lr', 'epochs', 'hidden_units']
     # - stats: array comprising [x_mean, x_std, y_mean, y_std] which are needed for proper normalization
+
+    # Extract only column associated to one of ['min', 'max', 'sum', 'avg']
+    time_series = series.iloc[:, 1]
 
     # Create study and save best params
     TDNN_study = optuna.create_study(direction='minimize')
@@ -1114,56 +1136,106 @@ def tdnn_forecasting_training(time_series, n_trials=10):
 
     # calculate MSE
     TDNN_test_MSE = best_model_TDNN.evaluate(x_test, y_test)
-    # print('Test MSE: ', TDNN_test_MSE)
+    print('Test MSE: ', TDNN_test_MSE)
 
     # Denormalize predictions and targets for plotting
-    #y_pred_training = y_pred_training * y_std + y_mean
-    #y_pred_test = y_pred_test * y_std + y_mean
-    #y_training = y_training * y_std + y_mean
-    #y_test = y_test * y_std + y_mean
+    y_pred_training = y_pred_training * y_std + y_mean
+    y_pred_test = y_pred_test * y_std + y_mean
+    y_training = y_training * y_std + y_mean
+    y_test = y_test * y_std + y_mean
 
-    # Plot the results
-    #plt.figure(figsize=(12, 10))
-    #plt.subplot(2, 1, 1)
-    #plt.plot(y_training.reshape(-1), label='Target')
-    #plt.plot(y_pred_training, label='Predicted')
-    #plt.title('Predicted Training vs. Target Training')
-    #plt.legend()
-    #plt.xlabel('Time')
-    #plt.subplot(2, 1, 2)
-    #plt.plot(y_test.reshape(-1), label='Target')
-    #plt.plot(y_pred_test, label='Predicted')
-    #plt.title('Predicted Test vs. Target Test')
-    #plt.xlabel('Time')
-    #plt.legend()
-    #plt.show()
+     # Get time indexes for training and test data
+    time_indexes_training = series.iloc[:len(y_training.reshape(-1)), 0]
+
+    # Calculate the starting index for the test data in the original time series
+    test_start_index = len(series) - len(y_test.reshape(-1))
+    time_indexes_test = series.iloc[test_start_index:, 0]  # Get time indexes for test data
+
+    '''# Plot the results
+    plt.figure(figsize=(12, 10))
+    plt.subplot(2, 1, 1)
+    plt.plot(time_indexes_training, y_training.reshape(-1), label='Target')
+    plt.plot(time_indexes_training, y_pred_training, label='Predicted')
+    plt.title('Predicted Training vs. Target Training')
+    plt.legend()
+    plt.xlabel('Time')
+    plt.subplot(2, 1, 2)
+    plt.plot(time_indexes_test, y_test.reshape(-1), label='Target')
+    plt.plot(time_indexes_test, y_pred_test, label='Predicted')
+    plt.title('Predicted Test vs. Target Test')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()'''
+
 
     return [best_model_TDNN, best_params, stats]
 
 
 
-def tdnn_forecasting_prediction(model, tau, time_series, num_predictions, stats):
+def tdnn_forecasting_prediction(model, tau, time_series, stats, timestamp_init = None, timestamp_end = None):
     # Function that uses the trained model to predict num_predictions in the future
     # INPUT:
     # - model: TDNN best model after training
     # - tau: length of input sliding window which can be retrieved from best_params['tau']
-    # - num_predictions: number of future step to predict
+    # - time_series: this series has a column 'time'
+    #                and a column with one of ['min', 'max', 'sum', 'avg']:
+    # - timestamp_init: begin date of prediction in days format
+    #                   default value = None
+    # - timestamp_end: end date of prediction in days format
+    #                  default value = None
     # - stats: list with statistics to normalize the time series
-
+    # OUTPUT:
+    # - predictions_df: a dataframe with first column named 'time' with prediction_timestamps
+    #                   and second column with name in ['min', 'max', 'sum', 'avg'] with predicted values
     x_mean, x_std, y_mean, y_std = stats
-    sequences = create_sequences(time_series, tau)
-    initial_window = sequences[-1, :-1]  # Use the last sequence as the initial window
+    time_series['time'] = pd.to_datetime(time_series['time'])
+    series = time_series.iloc[:,1]
+    column_name = time_series.columns[1]
+    initial_window = np.array(series[len(series)-tau+1:])  # Use the last sequence as the initial window
     predictions = []
     current_window = (initial_window - x_mean) / x_std  # Normalize the input window
+
+    # Get last time_stamp and add one as start index of prediction
+    time_indexes = time_series.iloc[:, 0]
+
+    # Convert time_indexes to timezone-naive datetime objects if they are timezone-aware
+    time_indexes = time_indexes.dt.tz_localize(None)
+
+    # Get the last timestamp from time_indexes if timestamp_init is not given
+    if timestamp_init == None:
+        timestamp_init = time_indexes.iloc[-1] + pd.DateOffset(days=1)
+    else:
+        timestamp_init = pd.to_datetime(timestamp_init)
+
+    # Predict for next 7 days if timestamp_end is not given
+    if timestamp_end == None:
+        timestamp_end = timestamp_init + pd.DateOffset(days=7)
+    else:
+        timestamp_end = pd.to_datetime(timestamp_end)
+
+    # Calculate num_prediction as difference in days
+    num_predictions = int((timestamp_end - timestamp_init).days) + 1
+
+    # Create prediction_timestamps as a Pandas DatetimeIndex
+    prediction_timestamps = pd.date_range(start=timestamp_init, periods=num_predictions, freq='D')
+
+    if time_series.iloc[:,0].dt.tz is not None:  # If original data has timezone, apply it
+        if prediction_timestamps.tz is None:
+            prediction_timestamps = prediction_timestamps.tz_localize(time_series.iloc[:,0].dt.tz)
+        else:
+            prediction_timestamps = prediction_timestamps.tz_convert(time_series.iloc[:,0].dt.tz)
 
     for _ in range(num_predictions):
         # Predict the next value
         # Reshape the input to match the model's expected input shape (1, 1, tau-1)
-        next_value_norm = model.predict(current_window.reshape(1, 1, -1))[0, 0]
+        next_value_norm = model.predict(current_window.reshape(1, 1, -1))
+        next_value_norm = next_value_norm.reshape(-1)  # Convert to 1D array
+
         next_value = next_value_norm * y_std + y_mean  # Denormalize the prediction
         predictions.append(next_value)
 
         # Update the current window for the next prediction
         current_window = np.append(current_window[1:], (next_value - x_mean) / x_std)
 
-    return predictions
+    predictions_df = pd.DataFrame({'time': prediction_timestamps, column_name: predictions})
+    return predictions_df

@@ -2,6 +2,7 @@ from dataprocessing_functions import tdnn_forecasting_prediction
 from dataprocessing_functions import feature_engineering_pipeline
 from dataprocessing_functions import get_model_forecast
 from connections_functions import get_historical_data
+import pandas as pd
 
 
 def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end, transformation, forecasting):
@@ -23,14 +24,26 @@ def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestam
 
         transformed_data = feature_engineering_pipeline(historical_data, transformation_config)
 
-        forecasting_model_info = get_model_forecast(historical_data[-1])
+        forecasting_model_info  = get_model_forecast(historical_data.iloc[-1])
 
-        forecasting_model = forecasting_model_info[0]
-        forecasting_params = forecasting_model_info[1]
-        forecasting_stats = forecasting_model_info[2]
-        predictions = tdnn_forecasting_prediction(forecasting_model, forecasting_params['tau'], transformed_data, timestap_start, timestamp_end, forecasting_stats)
+        data_predictions = []
+        #for feature_name, feature_model_info in models.items():
+        for feature_name, feature_model_info in forecasting_model_info.items():
+            if feature_name in historical_data.columns:
+                feature = historical_data[['time',feature_name]]
+                if not (feature[feature_name].empty or feature[feature_name].isna().all() or feature[feature_name].isnull().all()):
+                    forecasting_model = feature_model_info[0]
+                    forecasting_params = feature_model_info[1]
+                    forecasting_stats = feature_model_info[2]
+                    predictions = tdnn_forecasting_prediction(forecasting_model, forecasting_params['tau'], feature, forecasting_stats, '2026-02-20 00:00:00+00:00')
+                    data_predictions.append(predictions)
 
-        json_predictions = predictions.to_json(orient='records')
+        data_predictions = pd.concat(data_predictions, axis=1)
+
+        # Drop the duplicate 'time' column after concatenation
+        data_predictions = data_predictions.loc[:, ~data_predictions.columns.duplicated()]
+        
+        json_predictions = data_predictions.to_json(orient='records')
 
         return json_predictions
     
