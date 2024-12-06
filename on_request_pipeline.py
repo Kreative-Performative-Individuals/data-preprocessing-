@@ -35,7 +35,7 @@ def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestam
                     forecasting_model = feature_model_info[0]
                     forecasting_params = feature_model_info[1]
                     forecasting_stats = feature_model_info[2]
-                    predictions = tdnn_forecasting_prediction(forecasting_model, forecasting_params['tau'], feature, forecasting_stats, '2026-02-20 00:00:00+00:00')
+                    predictions = tdnn_forecasting_prediction(forecasting_model, forecasting_params['tau'], feature, forecasting_stats, timestap_start, timestamp_end)
                     data_predictions.append(predictions)
 
         data_predictions = pd.concat(data_predictions, axis=1)
