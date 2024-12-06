@@ -4,11 +4,14 @@ FROM python:3.9-slim
 # Impostiamo la directory di lavoro nel container
 WORKDIR /app
 
-# Copiamo i file necessari nel container
-COPY . .
+# Copiamo il file requirements.txt nel container
+COPY requirements.txt .
+
 # Installiamo le dipendenze Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiamo i file necessari nel container
+COPY . .
 # Espone la porta 8003 per FastAPI
 EXPOSE 8003
 
