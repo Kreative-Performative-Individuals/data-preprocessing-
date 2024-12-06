@@ -7,7 +7,6 @@ def get_datapoint(i):
     with open("synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
         stream_data=data[1]
-    i=10
     datapoint = {
     'time': stream_data['time'][i],
     'asset_id': stream_data['asset_id'][i],
@@ -19,6 +18,7 @@ def get_datapoint(i):
     'min': stream_data['min'][i],
     'max': stream_data['max'][i],
     'var': stream_data['var'][i]}
+    #print(f'\n {datapoint}')
         
     return datapoint
 
@@ -53,37 +53,71 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     with open("synthetic_data.json", "r") as json_file:
         data = json.load(json_file)
     
-    historical_data=pd.DataFrame(data[0])
+    historical_data=pd.concat([pd.DataFrame(data[0]), pd.DataFrame(data[1])], axis=0)
 
-    if timestamp_start == -1 and timestamp_end ==-1:
-        timestamp_start = historical_data['time'][ len(historical_data['time']) - 50]
-        timestamp_end = historical_data['time'][ len(historical_data['time']) - 1]
 
-    i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
+    # if timestamp_start == -1 and timestamp_end ==-1:
+    #     timestamp_start = historical_data['time'][len(historical_data['time']) - 50]
+    #     timestamp_end = historical_data['time'][len(historical_data['time'])-1]
+
+    # i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
+    # i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
+    
     i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
+    i_start=i_end-100
+
     historical_data= historical_data[
     (historical_data['name'] == machine_name) & 
     (historical_data['asset_id'] == asset_id) & 
     (historical_data['kpi'] == kpi) & 
     (historical_data['operation'] == operation) & 
     (historical_data.index >= i_start) & 
-    (historical_data.index <= i_end)
+    (historical_data.index <= i_end) &
+    (historical_data['status']!= 'Corrupted')
 ]
     return historical_data
 
+
+from notification.mail_sender import MailSender
 def send_alert(identity, type, counter=None, probability=None): #the identity returns the type of Kpi and machine for which the anomaly/nan values
                                         # have been detected, type is 'Anomaly' or 'Nan', counter (is the number of consecutive days in
                                         # which we have detected nan) is None if type = 'Anomaly'
     if type == 'Anomaly':
-        alert = f"Alert anomaly in {identity['name']} - {identity['asset_id']} - {identity['kpi']} - {identity['operation']}! The probability that this anomaly is correct is {probability}."
-    else: 
-        alert = f"It has been {counter} days that {identity['name']} - {identity['asset_id']} returns NaN values in {identity['kpi']} - {identity['operation']}. Possible malfunctioning either in the acquisition system or in the machine!"
+        object='KPI - Anomaly alert'
+        alert = f"Alert anomaly in machine: '{identity['name']}' - asset: '{identity['asset_id']}' - kpi: '{identity['kpi']}' - operation: '{identity['operation']}'! The probability that this anomaly is correct is {probability}%."
+    else:
+        object='Malfunctioning alert' 
+        alert = f"It has been {counter} days that machine: '{identity['name']}' - asset: '{identity['asset_id']}' returns NaN values in kpi: '{identity['kpi']}' - operation: '{identity['operation']}'. Possible malfunctioning either in the acquisition system or in the machine!"
+    #sender = MailSender('mcaponio28@libero.it', 'p@sswordLiber0', 'mcaponio28@gmail.com')
 
+    #sender.send_mail(object, alert)
+    print(alert)
     # Insert the part to send the alert to GUI for the screen visualization to the user
 
 
-def store_datapoint(new_datapoint):
-    # Write the list of dictionaries to a JSON file
+def store_datapoint(new_datapoint, i):
+    #print(f'{new_datapoint} \n')
+    # Write the dictionary (the new datapoint)
     with open('new_datapoint.json', "w") as json_file:
         json.dump(new_datapoint, json_file, indent=1) 
         # In some manner gives the new_datapoint dictionary to the database, so they can store it
+    with open('synthetic_data.json', "r") as json_file:
+        data=json.load(json_file)
+        historical_data=data[0]
+        stream_data=data[1]
+    
+    stream_data['time'][i]=new_datapoint['time']
+    stream_data['name'][i]=new_datapoint['name']
+    stream_data['asset_id'][i]=new_datapoint['asset_id']
+    stream_data['kpi'][i]=new_datapoint['kpi']
+    stream_data['operation'][i]=new_datapoint['operation']
+    stream_data['sum'][i]=new_datapoint['sum']
+    stream_data['max'][i]=new_datapoint['max']
+    stream_data['min'][i]=new_datapoint['min']
+    stream_data['avg'][i]=new_datapoint['avg']
+    stream_data['var'][i]=new_datapoint['var']
+    stream_data['status'][i]=new_datapoint['status']
+
+    with open('synthetic_data.json', "w") as json_file:
+        json.dump([historical_data, stream_data], json_file, indent=1)
+

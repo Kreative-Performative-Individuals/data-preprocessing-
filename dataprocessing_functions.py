@@ -35,7 +35,7 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 fields = ['time', 'asset_id', 'name', 'kpi', 'operation', 'sum', 'avg', 'min', 'max', 'var']
 identity=['asset_id', 'name', 'kpi', 'operation']
 features=['sum', 'avg', 'min', 'max', 'var']
-store_path = "store.json"
+store_path = "store.pkl"
 store_path_forecasting = "forecasting_models.pkl"
 data_path = "synthetic_data.json"
 b_length=40
@@ -80,16 +80,16 @@ kpi={'time': [[0, 86400], ['working', 'idle', 'offline']], # As indicated in the
 
 
 def get_batch(x, f):    
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)    
+    with open(store_path, "rb") as file:
+            info = pickle.load(file)    
     # This function will return batch
     return list(info[x['name']][x['asset_id']][x['kpi']][x['operation']][0][features.index(f)])
 
 
 
 def update_batch(x, f, p): 
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
+    with open(store_path, "rb") as file:
+            info = pickle.load(file)
     dq=deque(info[x['name']][x['asset_id']][x['kpi']][x['operation']][0][features.index(f)])
     dq.append(p)
     
@@ -98,46 +98,46 @@ def update_batch(x, f, p):
     # Store the new batch into the info dictionary.
     info[x['name']][x['asset_id']][x['kpi']][x['operation']][0][features.index(f)]= list(dq)
 
-    with open(store_path, "w") as json_file:
-        json.dump(info, json_file, indent=1) 
+    with open(store_path, "wb") as file:
+        pickle.dump(info, file) 
 
 
 
 def update_counter(x, reset=False):
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
+    with open(store_path, "rb") as file:
+            info = pickle.load(file)
     if reset==False:
         info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]=info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]+1
     else:
         info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]=0
     
-    with open(store_path, "w") as json_file:
-        json.dump(info, json_file, indent=1) 
+    with open(store_path, "wb") as file:
+        pickle.dump(info, file) 
 
 
 
 def get_counter(x):
-    with open(store_path, "r") as json_file:
-        info = json.load(json_file)
+    with open(store_path, "rb") as file:
+        info = pickle.load(file)
     return info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]
 
 
 
 def get_model_ad(x): #id should contain the identity of the kpi about whihc we are storing the model 
                            #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
+    with open(store_path, "rb") as file:
+            info = pickle.load(file)
     return info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]
 
 
 
 def update_model_ad(x, model):
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
+    with open(store_path, "rb") as file:
+            info = pickle.load(file)
     info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]=model
 
-    with open(store_path, "w") as json_file:
-        json.dump(info, json_file, indent=1) 
+    with open(store_path, "wb") as file:
+        pickle.dump(info, file) 
 
 
 
@@ -244,30 +244,38 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 def check_f_consistency(x):
     indicator=[True, True, True, True]
-    if not np.isnan(x['min']) and not np.isnan(x['avg']):
+    if not pd.isna(x['min']) and not pd.isna(x['avg']):
         if x['min'] > x['avg']:
             indicator[2]=False
             indicator[1]=False
-    if not np.isnan(x['min']) and not np.isnan(x['max']):
+    if not pd.isna(x['min']) and not pd.isna(['max']):
         if x['min'] > x['max']:
             indicator[2]=False
             indicator[3]=False
-    if not np.isnan(x['min']) and not np.isnan(x['sum']):
+    if not pd.isna(x['min']) and not pd.isna(x['sum']):
         if x['min'] > x['sum']:
             indicator[2]=False
             indicator[0]=False
-    if not np.isnan(x['avg']) and not np.isnan(x['max']):
+    if not pd.isna(x['avg']) and not pd.isna(x['max']):
         if x['avg'] > x['max']:
             indicator[1]=False
             indicator[3]=False
-    if not np.isnan(x['avg']) and not np.isnan(x['sum']):
+    if not pd.isna(x['avg']) and not pd.isna(x['sum']):
         if x['avg'] > x['sum']:
             indicator[1]=False
             indicator[0]=False
-    if not np.isnan(x['max']) and not np.isnan(x['sum']):
+    if not pd.isna(x['max']) and not pd.isna(x['sum']):
         if x['max'] > x['sum']:
             indicator[0]=False
             indicator[3]=False
+    if pd.isna(x['sum']):
+        indicator[0]=False
+    if pd.isna(x['avg']):
+        indicator[1]=False
+    if pd.isna(x['min']):
+        indicator[2]=False
+    if pd.isna(x['max']):
+        indicator[3]=False
     return indicator
 
 # ______________________________________________________________________________________________
@@ -282,42 +290,46 @@ def validate(x):
     x = dict(OrderedDict((key, x[key]) for key in fields)) # order the fields of the datapoint
 
     # Ensure the reliability of the field time
-    if np.isnan(x['time']):
+    if pd.isna(x['time']):
         x['time'] = datetime.now()
 
     # Check that there is no missing information in the identity of the datapoint, otherwise we store in the database, labelled 'Corrupted'.
     if any(pd.isna(x.get(key)) for key in identity):
-        update_counter(x)
+        #Future developments for updating the counter in this case.
         x['status']='Corrupted'
         store_datapoint(x)
         return None
+    # if the code run forward it means that the identity is intact.
+    old_counter=get_counter(x)
+    #print(f'old counter {old_counter}')
     # Check if all the features that the datapoint has are nan or missing.
-    elif all(pd.isna(x.get(key)) for key in features):
+    if all(pd.isna(x.get(key)) for key in features):
         update_counter(x)
         x['status']='Corrupted'
         store_datapoint(x)
-        return None
+        return None, old_counter
     
     #if the datapoint comes here it means that it didn't miss any information about the identity and at least one feature that is not nan.
 
-    x, _=check_range(x) # the flag is to take trace if the datapoint has naturally nans or nans are the result of validation checks.
+    x=check_range(x) #Here i change letter since i need x to get the counter later.
 
     #if the datapoint comes here it means that at least one feature value is respecting the range constraint for the specific kpi.
     if x:
         # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
         cc=check_f_consistency(x)
         if all(not c for c in cc): #meaning that no feature respect the logic rule
-            update_counter(x)
-            x['status']='Corrupted'
-            store_datapoint(x)
-            return None
+            if pd.isna(x['var']):
+                update_counter(x)
+                x['status']='Corrupted'
+                store_datapoint(x)
+                return None, old_counter
         elif all(c for c in cc): #the datapoint verifies the logic rule.
                             #if now there is a nan it could be either the result of the range check or that the datapoint intrinsically has these nans.
             any_nan=False
             for f in features:
-                if np.isnan(x[f]):
+                if pd.isna(x[f]):
                     any_nan=True
-                    if all(np.isnan(get_batch(x, f))):
+                    if all(pd.isna(get_batch(x, f))):
                         pass
                     else:
                         update_counter(x)
@@ -330,12 +342,11 @@ def validate(x):
                 if c==False:
                     x[f]=np.nan
             update_counter(x)
-        return x
+    return x, old_counter
 
 
 
 def check_range(x):
-    flag=True #takes trace of: has the datapoint passed the range check without being changed?
 
     #Retrieve the specific range for the kpi that we are dealing with
     l_thr=kpi[x['kpi']][0][0]
@@ -344,20 +355,29 @@ def check_range(x):
     for k in features:
         if x[k]<l_thr:
             x[k]=np.nan
-            flag=False
         if k in ['avg', 'max', 'min', 'var'] and x[k]>h_thr:
             x[k]=np.nan
-            flag=False
 
     # if after checking the range all features are nan --> corrupted
-    if all(np.isnan(value) for value in [x.get(key) for key in features]):
+    if all(pd.isna(value) for value in [x.get(key) for key in features]):
         update_counter(x)
         x['status']='Corrupted'
         store_datapoint(x)
         return None
     else:
-        return x, flag
+        return x
 
+def check_range_ai(x):
+    flag=True #takes trace of: has the datapoint passed the range check without being changed?
+    l_thr=kpi[x['kpi']][0][0]
+    h_thr=kpi[x['kpi']][0][1]
+
+    for k in features:
+        if x[k]<l_thr:
+            flag=False
+        if k in ['avg', 'max', 'min', 'var'] and x[k]>h_thr:
+            flag=False
+    return flag
 
 
 # ______________________________________________________________________________________________
@@ -367,14 +387,14 @@ def check_range(x):
 
 def predict_missing(batch):
     seasonality=7
-    cleaned_batch= [x for x in batch if not np.isnan(x)]
+    cleaned_batch= [x for x in batch if not pd.isna(x)]
     if not(all(pd.isna(x) for x in batch)) and batch:
         if len(cleaned_batch)>2*seasonality:
             model = ExponentialSmoothing(cleaned_batch, seasonal='add', trend='add', seasonal_periods=seasonality)
             model_fit = model.fit()
             prediction = model_fit.forecast(steps=1)[0]
         else:
-            prediction=np.nanmean(batch)
+            prediction=float(np.nanmean(batch))
         return prediction
     else: 
         return np.nan # Leave the feature as nan since we don't have any information in the batch to make the imputation. If the datapoint has a nan because the feature is not definable for it, it will be leaved as it is from the imputator.
@@ -395,7 +415,7 @@ def imputer(x):
                     x[f]=predict_missing(batch)
 
         # Check again the consistency of features and the range.
-        if check_f_consistency(x) and check_range(x)[1]:
+        if check_f_consistency(x) and check_range_ai(x):
             pass
         else:  # It means that the imputed data point has not passed the check on the features and on their expected range.
             # In this case we use the LVCF as a method of imputation since it ensures the respect of these conditiono (the last point in the batch has been preiovusly checked)
@@ -413,9 +433,9 @@ def imputer(x):
 # This function implements all the steps needed for the cleaning in order to fuse the cleaning into one code line.
 
 def cleaning_pipeline(x):
-    old_counter=get_counter(x)
-    validated_dp=validate(x)
+    validated_dp, old_counter=validate(x)
     new_counter=get_counter(x)
+    #print(f'new counter: {new_counter}')
     if new_counter==old_counter+1 and new_counter>=faulty_aq_tol:
         id = {key: x[key] for key in identity if key in x}
         send_alert(id, 'Nan', new_counter)
@@ -452,7 +472,7 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 # arguments, the first takes the value False if no drift was detected or True if there is some 
 # drift, while the second returns the drift points. 
 
-def ADWIN_drift(x, delta=0.002, clock=10):
+def ADWIN_drift(x):
 
     for f in features:
 
@@ -494,34 +514,48 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 def ad_train(historical_data):
     #account also for the case in which one feature may not be definable for a kpi
-    nan_columns = historical_data.columns[historical_data.isna().all()]
-    historical_data = historical_data.drop(columns=nan_columns)
 
     train_set=pd.DataFrame(historical_data)[features]
+    nan_columns = train_set.columns[train_set.isna().all()]
+    train_set = train_set.drop(columns=nan_columns)
+    train_set=train_set.fillna(0)
+
     s=[]
     cc=np.arange(0.01, 0.5, 0.01)
     for c in cc:
         model = IsolationForest(n_estimators=200, contamination=c)
         an_pred=model.fit(train_set)
-        s.append(silhouette_score(train_set, an_pred))
-    optimal_c=cc[np.argmax(s)]
+        if len(set(an_pred)) > 1:  # Check for multiple clusters
+            s.append(silhouette_score(train_set, an_pred))
+        else:
+            s.append(-1)
+    if max(s)<=0.70:
+        optimal_c=1e-5
+    else:
+        optimal_c=cc[np.argmax(s)]
     model = IsolationForest(n_estimators=200, contamination=optimal_c)
     model.fit_predict(train_set)
-    return model 
+    return model
 
 def ad_predict(x, model):
     #account for the case in which one feature may be nan also after the imputation since the feature is not definable for that kpi.
-    dp=pd.DataFrame(x[features]).T
-    nan_columns = dp.columns[dp.isna().all()]
-    dp = dp.drop(columns=nan_columns)
+    dp=pd.DataFrame.from_dict(x, orient="index").T
+    dp=dp[features]
+    #nan_columns = dp.columns[dp.isna().all()]
+    #dp = dp.drop(columns=nan_columns)
+    dp=dp.fillna(0)
 
     status=model.predict(dp)
-    anomaly_probability = 1 / (1 + np.exp(-model.decision_function(dp)))
+    anomaly_score=model.decision_function(dp)
+    anomaly_prob=1- (1/(1+np.exp(-5*anomaly_score)))
     if status==-1:
         status='Anomaly'
     else:
         status='Normal'
-    return x, anomaly_probability
+    return status, int(anomaly_prob[0]*100)
+    
+
+
 ''''
 ________________________________________________________________________________________________________
 FUNCTIONS FOR FEATURE ENGINEERING

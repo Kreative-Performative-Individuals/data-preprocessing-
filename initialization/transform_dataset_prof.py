@@ -149,9 +149,7 @@ df=pd.DataFrame(in_data[0])
 import warnings
 warnings.filterwarnings("ignore")
 length=df.shape[0]//4
-for i in range(start_i, start_i+length):
-    if i%100==0:
-        print(f'{i}/{start_i+length}')
+for i in range(start_i, start_i+4):
     datapoint=df.iloc[i].to_dict()
     old_counter=get_counter(datapoint)
     #print(f'original datapoint: {datapoint}')
@@ -173,3 +171,5 @@ with open('C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\store.jso
 
 with open('C:\\Users\\mcapo\\Desktop\\Smart app project\\definitive\\definitivo_3\\store.json', "w") as json_file:
     json.dump(info, json_file, indent=1) 
+
+
