@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 import json
+from dataclasses import dataclass
 
 
 class RealTimeKPI(BaseModel):
@@ -15,10 +16,10 @@ class RealTimeKPI(BaseModel):
     def from_dictionary(cls, data, column):
         return cls(
             kpi=data["kpi"],
-            machine=data["machine"],
+            machine=data["name"],
             operation=data["operation"],
-            column=data[column],
-            value=data["value"]
+            column=column,
+            value=data[column]
         )
 
     def to_json(self):

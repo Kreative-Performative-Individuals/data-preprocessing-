@@ -13,27 +13,28 @@ class KafkaPublisher:
         self._port = port
         self._servers = servers
         self.aioproducer = self.create_kafka()
+        KafkaPublisher.instance = self
 
     def create_kafka(self):
         loop = asyncio.get_event_loop()
+
         return AIOKafkaProducer(
             loop=loop,
             bootstrap_servers=f'{self._servers}:{self._port}'
         )
 
-    async def open_session(self):
-        self.aioproducer.start()
-        return 'Kafka producer started'
-
-    async def send(self, data: RealTimeKPI):
+    async def send(self, data: list[RealTimeKPI], stop_event):
         try:
-            topic_name = self._topic
-            await self.aioproducer.send_and_wait(topic_name, data.to_json())
+            await self.aioproducer.send_and_wait(self._topic, data)
         except Exception as e:
             await self.aioproducer.stop()
-            raise e
+            stop_event.set()
         return 'Message sent successfully'
 
     async def finalize(self):
         await self.aioproducer.stop()
         return 'Kafka producer stopped'
+
+    @property
+    def topic(self):
+        return self._topic

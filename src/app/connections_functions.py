@@ -1,11 +1,12 @@
 import json
 import pandas as pd
+import src.app.config as config
 
 
 def get_datapoint(i):
     # In some manner receives data point as a dictionary of form
 
-    with open("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-\\synthetic_data.json", "r") as json_file:
+    with open(config.SYNTHETIC_DATA_PATH, "r") as json_file:
         data = json.load(json_file)
         stream_data = data[1]
     datapoint = {

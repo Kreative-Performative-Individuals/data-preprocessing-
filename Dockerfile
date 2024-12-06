@@ -30,6 +30,7 @@ COPY poetry.lock pyproject.toml /data_preprocessing/
 RUN poetry install
 
 COPY src/  /data_preprocessing/src
+COPY data/ /data_preprocessing/data
 
 # Expose port 8003
 EXPOSE 8003

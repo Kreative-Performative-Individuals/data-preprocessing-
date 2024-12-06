@@ -2,30 +2,13 @@
 
 from pydantic import BaseModel, validator
 import re
+import json
 
 
 class KPIStreamingRequest(BaseModel):
     kpis: list[str]  # lis of all kpis
     machines: list[str]  # list of all machines
     operations: list[str]  # list of all operations
-
-    @validator("kpis")
-    def validate_kpis(cls, value):
-        if not isinstance(value, list):
-            raise ValueError("KPI name must be a list.")
-        return value
-
-    @validator("machines")
-    def validate_machines(cls, value):
-        if not isinstance(value, list):
-            raise ValueError("Machine name must be a list.")
-        return value
-
-    @validator("operations")
-    def validate_operations(cls, value):
-        if not isinstance(value, list):
-            raise ValueError("Operation name must be a list.")
-        return value
 
 
 class KPIValidator:
@@ -55,8 +38,10 @@ class KPIValidator:
         return (kpi in self.kpis.keys()
                 and machine in self.machines
                 and operation in self.operations
-                and cleaned_data[kpi] is not None)
+                and cleaned_data[self.get_aggregation_from_kpi(kpi)] is not None)
 
     def get_aggregation_from_kpi(self, kpi: str):
         return self.kpis[kpi]
 
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
