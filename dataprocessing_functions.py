@@ -739,7 +739,7 @@ def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
         return None  # No significant seasonality detected
     
     # Return the corresponding period (seasonality)
-    return highest_acf_lag
+    return int(highest_acf_lag)
 
 
 # ______________________________________________________________________________________________
@@ -794,7 +794,7 @@ def seasonal_additive_decomposition(dataframe, period):
         return None  
 
     if period == None:
-        period = len(dataframe)
+        period = 7
 
     if len(series) < 2 * period:  # Ensure enough data points for at least two full cycles
         print(f"Not enough data for two full cycles. Skipping decomposition.")
@@ -856,6 +856,8 @@ def make_stationary_decomp(df, decompositions):
 
 def make_stationary_diff(df, seasonality_period=[]):
     try:
+        # Compute the baseline of the original series
+        baseline = df.median()
         # Check if the input dataframe is empty
         if df.empty:
             raise ValueError("The input time series is empty.")
@@ -873,6 +875,8 @@ def make_stationary_diff(df, seasonality_period=[]):
                 else:
                     raise ValueError(f"Invalid seasonality period: {period}. It should be a positive integer or float.")
         
+        # Add the baseline back to the differenced series
+        df_diff += baseline
         return df_diff
     
     except Exception as e:

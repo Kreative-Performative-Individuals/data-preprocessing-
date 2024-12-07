@@ -56,15 +56,18 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     historical_data=pd.concat([pd.DataFrame(data[0]), pd.DataFrame(data[1])], axis=0)
 
 
-    # if timestamp_start == -1 and timestamp_end ==-1:
-    #     timestamp_start = historical_data['time'][len(historical_data['time']) - 50]
-    #     timestamp_end = historical_data['time'][len(historical_data['time'])-1]
-
-    # i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
-    # i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
+    if timestamp_start == -1 and timestamp_end ==-1:
+        i_end = historical_data['time'][len(historical_data['time'])-1]
+        i_start=i_end-100
+    elif timestamp_start == -1:
+        i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
+        i_start=i_end-100
+        print(i_start)
+        print(i_end)
+    else:
+        i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
+        i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
     
-    i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
-    i_start=i_end-100
 
     historical_data= historical_data[
     (historical_data['name'] == machine_name) & 
@@ -73,8 +76,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     (historical_data['operation'] == operation) & 
     (historical_data.index >= i_start) & 
     (historical_data.index <= i_end) &
-    (historical_data['status']!= 'Corrupted')
-]
+    (historical_data['status']!= 'Corrupted')]
     return historical_data
 
 

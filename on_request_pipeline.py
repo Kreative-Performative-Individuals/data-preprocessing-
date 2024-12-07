@@ -17,12 +17,12 @@ def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestam
     }
 
     if forecasting:
-        transformation_config['make_stationary'] = True
-        transformation_config['scaler'] = True
+        #transformation_config['make_stationary'] = True
+        #transformation_config['scaler'] = True
         
         historical_data = get_historical_data(machine_name, asset_id, kpi, operation, -1, -1) ## CONNECTION WITH API
 
-        transformed_data = feature_engineering_pipeline(historical_data, transformation_config)
+        #transformed_data = feature_engineering_pipeline(historical_data, transformation_config)
 
         forecasting_model_info  = get_model_forecast(historical_data.iloc[-1])
 
@@ -56,7 +56,7 @@ def get_request(machine_name, asset_id, kpi, operation, timestap_start, timestam
         historical_data = get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end) ## CONNECTION WITH API
 
         transformed_data = feature_engineering_pipeline(historical_data, transformation_config)
-
+        
         json_transformed_data = transformed_data.to_json(orient='records')
 
         return json_transformed_data
