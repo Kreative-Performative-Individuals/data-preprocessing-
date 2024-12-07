@@ -1,8 +1,8 @@
-import sys
-sys.path.append('C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-')
 from dataprocessing_functions import machine, kpi, store_path
 import pickle
-
+import json
+import os
+import pandas as pd
     # Dictionary used to mantain a local version of the original kpis in order to handle the specific batches useful for the imputation and the data drift analysis.
 info = {}
 
@@ -24,3 +24,32 @@ for m in list(machine.keys()):
 # Save the dictionary to a pickle file
 with open(store_path, "wb") as file:  # "wb" means write binary
     pickle.dump(info, file)
+
+
+''''For the initialization we will consider historical data the first 200 days (up to 16/09) and the remaining 33 days of each timeseries (specific combination of
+['asset_id', 'name', 'kpi', 'operation']) as available for the stream.
+'''
+
+
+# Define a relative path
+relative_path = os.path.join("initialization", "cleaned_predicted_dataset.json")
+script_dir = os.getcwd()
+absolute_path = os.path.join(script_dir, relative_path)
+
+with open(absolute_path, "r") as file:
+    historical=json.load(file)
+
+historical=pd.DataFrame(historical)[:38400]
+
+# Define a relative path
+relative_path = os.path.join("initialization", "original_adapted_dataset.json")
+script_dir = os.getcwd()
+absolute_path = os.path.join(script_dir, relative_path)
+
+with open(absolute_path, "r") as file:
+    stream=json.load(file)
+
+stream=pd.DataFrame(stream)[38400:]
+
+
+
