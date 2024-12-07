@@ -1,3 +1,6 @@
+# Ignore DevSecOps container scanning
+devsecops_container_scanning.yml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

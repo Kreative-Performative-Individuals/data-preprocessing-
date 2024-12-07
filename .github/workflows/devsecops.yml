@@ -1,4 +1,4 @@
-name: Security Scan Pipeline
+name: Security Scan Pipeline (Secret Scanning, SCA, SAST, IaC)
 
 on:
   push:
@@ -173,12 +173,6 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-iac_sarif-report.sarif'
-
-
-
-
-
-  # Trivy to do Container Scanning?
 
 
   # OWASP ZAP to do Dynamic Application Security Test (DAST)?
