@@ -478,30 +478,42 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 # arguments, the first takes the value False if no drift was detected or True if there is some 
 # drift, while the second returns the drift points. 
 
-def ADWIN_drift(x):
+def ADWIN_drift(x, delta=0.005, drift_threshold=3):
+    """
+    Detects concept drift using the ADWIN algorithm.
+
+    Parameters:
+        x (DataFrame): Input data.
+        features (list): List of feature names to check for drift.
+        b_length (int): Minimum required batch length.
+        delta (float): Sensitivity parameter for ADWIN (default=0.005).
+        drift_threshold (int): Number of feature drifts to signal overall drift (default=3).
+
+    Returns:
+        bool: True if overall drift is detected, False otherwise.
+    """
+    drift_count_per_f = 0
 
     for f in features:
-
-        # Check if the column exists in the DataFrame
+        # Get the feature data (batch)
         batch = get_batch(x, f)
-        batch1 = batch[:-1]
-        batch2 = batch[1:]
-        adwin = drift.ADWIN(delta=0.05, clock=10)
-        flag1=False
-        flag2=False
 
-        for i, value in enumerate(batch1):
-            adwin.update(value)
-            if adwin.drift_detected and i>b_length-3:
-                flag1=True
-        for i, value in enumerate(batch2):
-            adwin.update(value)
-            if adwin.drift_detected and i>b_length-3:
-                flag2=True
-        if flag1==False and flag2==True:
-            return True
-        else:
+        if len(batch)<b_length:
             return False
+        else:
+            # Initialize ADWIN instance for this feature
+            adwin = drift.ADWIN(delta=delta)
+            # Check for drift
+            for i, value in enumerate(batch):
+                adwin.update(value)
+                if adwin.drift_detected:
+                    drift_count_per_f += 1
+
+    if drift_count_per_f>=drift_threshold:
+        return True
+    else: 
+        return False
+
 
 ''''
 ________________________________________________________________________________________________________
@@ -530,7 +542,7 @@ def ad_train(historical_data):
     cc=np.arange(0.01, 0.5, 0.01)
     for c in cc:
         model = IsolationForest(n_estimators=200, contamination=c)
-        an_pred=model.fit(train_set)
+        an_pred=model.fit_predict(train_set)
         if len(set(an_pred)) > 1:  # Check for multiple clusters
             s.append(silhouette_score(train_set, an_pred))
         else:
@@ -554,12 +566,12 @@ def ad_predict(x, model):
     status=model.predict(dp)
     anomaly_score=model.decision_function(dp)
     anomaly_prob=1- (1/(1+np.exp(-5*anomaly_score)))
+    anomaly_prob=int(anomaly_prob[0]*100)
     if status==-1:
         status='Anomaly'
     else:
         status='Normal'
-    return status, int(anomaly_prob[0]*100)
-    
+    return status, anomaly_prob
 
 
 ''''

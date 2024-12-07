@@ -12,8 +12,10 @@ id={'asset_id':  'ast-yhccl1zjue2t',
     'name': 'metal_cutting',
     'kpi': 'time',
     'operation': 'working'}
+
+# np.random.seed(42)
 data=[]
-anomaly_probability=0.01
+anomaly_probability=np.random.uniform(0.01, 0.035)
 probability_of_nan = 0.05
 #_____________________________________________________________________________________________________________________________________________________________________________________
 # historical data
@@ -21,12 +23,12 @@ probability_of_nan = 0.05
 # Start date
 n_points_historical = 1000
 
-np.random.seed(42)
+
 
 normal_data=[]
 anomaly_indices = np.random.choice(range(n_points_historical), size=int(n_points_historical * anomaly_probability), replace=False)
 magg_factor=np.random.uniform(1.2, 1.5, size=int(n_points_historical * anomaly_probability))
-window_size=5
+window_size=15
 
 normal_data.append(np.convolve(np.random.normal(60000, 9000, n_points_historical), np.ones(window_size)/window_size, mode='same')) #sum #86400  
 normal_data[0][anomaly_indices] = max(normal_data[0])*magg_factor
@@ -37,7 +39,7 @@ normal_data[1][anomaly_indices] = max(normal_data[1])*magg_factor
 normal_data.append(np.convolve(np.random.normal(15000, 8000, n_points_historical),  np.ones(window_size)/window_size, mode='same')) #min 
 normal_data[2][anomaly_indices] = max(normal_data[2])*magg_factor
 
-normal_data.append(np.convolve(np.random.normal(44200, 7000, n_points_historical),  np.ones(window_size)/window_size, mode='same')) #max 
+normal_data.append(np.convolve(np.random.normal(44200, 3000, n_points_historical),  np.ones(window_size)/window_size, mode='same')) #max 
 normal_data[3][anomaly_indices] = max(normal_data[3])*magg_factor
 
 normal_data.append(np.convolve(np.random.normal(35000, 8000, n_points_historical),  np.ones(window_size)/window_size, mode='same')) #var
@@ -68,7 +70,7 @@ historical_data = {
     'min': normal_data[2][window_size:-window_size].tolist(),
     'max': normal_data[3][window_size:-window_size].tolist(),
     'var': normal_data[4][window_size:-window_size].tolist(), 
-    'anomaly': anomaly_status[window_size:-window_size]
+    'status': anomaly_status[window_size:-window_size]
 }
 
 
@@ -92,12 +94,11 @@ data.append(historical_data)
 
 # Start date
 n_points_stream=500
-drift_index=np.random.uniform(10,n_points_stream-60) 
-increment=5000
+drift_index=np.random.uniform(100,n_points_stream-300) 
+increment=13000
 
 # Generate normal data (mean=0, std=1) with outliers
 normal_data=[]
-anomaly_probability=0.01
 non_nan_indices=[]
 magg_factor=np.random.uniform(1.2, 1.5, size=int(n_points_stream * anomaly_probability))
 
@@ -157,40 +158,43 @@ times = pd.date_range(
     freq='D',  # Daily frequency
     tz=timezone.utc  # Set timezone
 )
-
+times=times[window_size:-window_size].astype(str).tolist()
+print(f'Drift timestamp: {times[int(drift_index)]}')
 
 # Create a DataFrame with the time index
 stream_data = {
-    'time': times[window_size:-window_size].astype(str).tolist(),
-    'asset_id':  [id['asset_id']] * len(times[window_size:-window_size]),  # Added asset_id column
-    'name': [id['name']] * len(times[window_size:-window_size]),  # Added name column
-    'kpi': [id['kpi']] * len(times[window_size:-window_size]),  # Added kpi column
-    'operation': [id['operation']] * len(times[window_size:-window_size]),  # Added operation column
+    'time': times,
+    'asset_id':  [id['asset_id']] * len(times),  # Added asset_id column
+    'name': [id['name']] * len(times),  # Added name column
+    'kpi': [id['kpi']] * len(times),  # Added kpi column
+    'operation': [id['operation']] * len(times),  # Added operation column
     'sum': normal_data[0][window_size:-window_size].tolist(),
     'avg': normal_data[1][window_size:-window_size].tolist(),
     'min': normal_data[2][window_size:-window_size].tolist(),
     'max': normal_data[3][window_size:-window_size].tolist(),
     'var': normal_data[4][window_size:-window_size].tolist(),
-    'status': ['A/N']*490
+    'status': ['A/N']* len(times)
 }
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(10, 6))
 for f in features:
-    plt.plot(historical_data['time'], historical_data[f], label=f)
-    plt.plot(stream_data['time'], stream_data[f], label=f)
+    #plt.plot(historical_data['time'], historical_data[f], label=f)
+    plt.plot(pd.Series(stream_data['time']).str[:10], stream_data[f], label=f)
 
 plt.title('stream data')
 plt.xlabel('Time')
 plt.ylabel('Value')
 plt.xticks(range(1, n_points_stream, 10))
 plt.legend()
-plt.xticks(rotation=45)
+plt.xticks(rotation=90)
 plt.ylim([0,100000])
 plt.tight_layout()
+plt.savefig("C:\\Users\\mcapo\\Desktop\\dati sintetici.png", dpi=300)
 plt.show()
 
 data.append(stream_data)
+
 
 with open(data_path, "w") as json_file:
     json.dump(data, json_file, indent=1) 

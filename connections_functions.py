@@ -62,8 +62,8 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     elif timestamp_start == -1:
         i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
         i_start=i_end-100
-        print(i_start)
-        print(i_end)
+        # print(i_start)
+        # print(i_end)
     else:
         i_start = historical_data[historical_data['time'] == timestamp_start].index[0]
         i_end = historical_data[historical_data['time'] == timestamp_end].index[0]
