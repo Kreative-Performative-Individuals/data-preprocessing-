@@ -13,6 +13,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import silhouette_score
+from lime.lime_tabular import LimeTabularExplainer
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -21,6 +22,7 @@ from river import drift
 import optuna
 from connections_functions import send_alert, store_datapoint
 import pickle
+import dill
 import os
 
 
@@ -130,6 +132,19 @@ def get_model_ad(x): #id should contain the identity of the kpi about whihc we a
     return info[x['name']][x['asset_id']][x['kpi']][x['operation']][2]
 
 
+def get_model_ad_exp(x):
+    '''
+    This function is used to get the model for the LIME explainer.
+    Args:
+        x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
+    '''
+    ex_path = f'./explainer/{x["name"]}/{x["asset_id"]}/{x["kpi"]}/{x["operation"]}.dill'
+    try:
+        with open(ex_path, "rb") as file:
+            explainer = dill.load(file)
+        return explainer
+    except FileNotFoundError:
+        return None
 
 def update_model_ad(x, model):
     with open(store_path, "rb") as file:
@@ -140,6 +155,17 @@ def update_model_ad(x, model):
         pickle.dump(info, file) 
 
 
+def update_model_ad_exp(x, explainer):
+    '''
+    This function is used to update the LIME explainer model.
+    Args:
+        x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
+        explainer: The LIME explainer model.
+    '''
+    ex_path = f'./explainer/{x["name"]}/{x["asset_id"]}/{x["kpi"]}/{x["operation"]}.dill'
+    os.makedirs(os.path.dirname(ex_path), exist_ok=True)
+    with open(ex_path, "wb") as file:
+        dill.dump(explainer, file)
 
 '''def get_model_forecast(x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
     with open(store_path, "r") as json_file:
@@ -537,6 +563,22 @@ def ad_train(historical_data):
     model.fit_predict(train_set)
     return model
 
+def ad_exp_train(historical_data):
+    '''
+    This function is used to create a LIME explainer object.
+    Args:
+        historical_data: A DataFrame containing historical data.
+    Returns: The LIME explainer object.
+    '''
+    # consider using a tree explainer
+    explainer = LimeTabularExplainer(
+        historical_data[features].values, 
+        mode='classification', 
+        feature_names=features,
+        class_names=['Normal', 'Anomaly']
+        )
+    return explainer
+
 def ad_predict(x, model):
     #account for the case in which one feature may be nan also after the imputation since the feature is not definable for that kpi.
     dp=pd.DataFrame.from_dict(x, orient="index").T
@@ -554,7 +596,24 @@ def ad_predict(x, model):
         status='Normal'
     return status, int(anomaly_prob[0]*100)
     
-
+def ad_exp_predict(x, explainer, model):
+    '''
+    This function is used to predict the explanation for a data point.
+    Args:
+        x: A dictionary that contains the data point.
+        explainer: The LIME explainer model.
+        model: The anomaly detection model.
+    Returns: The explanation for the data point.
+    '''
+    dp=pd.DataFrame.from_dict(x, orient="index").T
+    dp=dp[features]
+    dp=dp.fillna(0)
+    explanation = explainer.explain_instance(
+        dp.values[0], 
+        model.predict,
+        top_labels=1
+    )
+    return explanation
 
 ''''
 ________________________________________________________________________________________________________
