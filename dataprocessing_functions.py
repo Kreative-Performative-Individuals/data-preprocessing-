@@ -106,10 +106,10 @@ def update_batch(x, f, p):
 def update_counter(x, reset=False):
     with open(store_path, "rb") as file:
             info = pickle.load(file)
-    if reset==False:
-        info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]=info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]+1
+    if not reset:
+        info[x['name']][x['asset_id']][x['kpi']][x['operation']][1] += 1
     else:
-        info[x['name']][x['asset_id']][x['kpi']][x['operation']][1]=0
+        info[x['name']][x['asset_id']][x['kpi']][x['operation']][1] = 0
     
     with open(store_path, "wb") as file:
         pickle.dump(info, file) 
@@ -278,12 +278,18 @@ def check_f_consistency(x):
         indicator[3]=False
     return indicator
 
-# ______________________________________________________________________________________________
-# This function takes in input the data point that we are receiving and checks its reliability in
-# terms of format. In general, if the data point is too severly compromised (one of the identity fields is 
-# nan or missing, all features are nan), then it is discarded (return None).
 
 def validate(x):
+    """Takes in input the data point that we are receiving and checks its reliability in
+    terms of format. In general, if the data point is too severly compromised (one of the identity fields is 
+    nan or missing, all features are nan), then it is discarded (return None).
+
+    Args:
+        x (_type_): the data point
+
+    Returns:
+        _type_: _description_
+    """
 
     for f in fields:
         x.setdefault(f, np.nan) #if some fields is missing from the expected ones, put a nan
@@ -300,7 +306,7 @@ def validate(x):
         store_datapoint(x)
         return None
     # if the code run forward it means that the identity is intact.
-    old_counter=get_counter(x)
+    old_counter = get_counter(x)
     #print(f'old counter {old_counter}')
     # Check if all the features that the datapoint has are nan or missing.
     if all(pd.isna(x.get(key)) for key in features):
@@ -334,12 +340,12 @@ def validate(x):
                     else:
                         update_counter(x)
                         break
-            if any_nan==False:
+            if not any_nan:
                                  #it means that the datapoint is consistent and it doesn't have nan values --> it is perfect.
                 update_counter(x, True) #reset the counter.
         else: #it means that some feature are consistent and some not. Put at nan the not consistent ones.
             for f, c in zip(features, cc):
-                if c==False:
+                if not c:
                     x[f]=np.nan
             update_counter(x)
     return x, old_counter
