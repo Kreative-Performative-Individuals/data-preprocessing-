@@ -1,4 +1,4 @@
-from dataprocessing_functions  import cleaning_pipeline, ad_predict, ad_train, ADWIN_drift, tdnn_forecasting_training,  get_model_ad, update_model_forecast, update_model_ad, identity, features
+from dataprocessing_functions  import ad_exp_predict, ad_exp_train, cleaning_pipeline, ad_predict, ad_train, ADWIN_drift, get_model_ad_exp, tdnn_forecasting_training,  get_model_ad, update_model_ad_exp, update_model_forecast, update_model_ad, identity, features
 from connections_functions import get_datapoint, get_historical_data, send_alert, store_datapoint
 
 import warnings
@@ -37,7 +37,9 @@ while c<490: #loops continuosly
 
             #retrain anomaly detection model
             model=ad_train(historical_data) #Here we should put the get_historical_data()
+            explainer = ad_exp_train(historical_data)
             update_model_ad(cleaned_datapoint, model)
+            update_model_ad_exp(cleaned_datapoint, explainer)
 
             #retrain forecasting algorithm model
             models = {}
@@ -54,13 +56,17 @@ while c<490: #loops continuosly
         #Anomalies detection branch 
         # get de model    
         ad_model= get_model_ad(cleaned_datapoint)
+        # get the explainer
+        ad_exp= get_model_ad_exp(cleaned_datapoint)
 
         #predict class
         cleaned_datapoint['status'], anomaly_score=ad_predict(cleaned_datapoint , ad_model)
 
         if cleaned_datapoint['status']=="Anomaly":
             anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
-            
+            print('Anomaly detected')
+            explanation = ad_exp_predict(cleaned_datapoint, ad_exp, ad_model)
+            print("Explanation: ", explanation)
             send_alert(anomaly_identity, 'Anomaly', None, anomaly_score)
         
         store_datapoint(cleaned_datapoint, c) ## CONNECTION WITH API
