@@ -1,4 +1,4 @@
-from dataprocessing_functions import (
+from src.app.dataprocessing_functions import (
     b_length,
     cleaning_pipeline,
     ad_predict,
@@ -11,7 +11,7 @@ from dataprocessing_functions import (
     identity,
     features,
 )
-from connections_functions import (
+from src.app.connections_functions import (
     get_datapoint,
     get_historical_data,
     send_alert,

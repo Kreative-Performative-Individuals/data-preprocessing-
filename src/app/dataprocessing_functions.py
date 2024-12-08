@@ -130,8 +130,6 @@ def get_batch(x, f):
     >>> get_batch(current_datapoint, feature)
     [0.5, 0.6, 0.7, 0.8]
     """    
-
-def get_batch(x, f):
     with open(store_path, "rb") as file:
         info = pickle.load(file)
     # This function will return batch
@@ -140,7 +138,7 @@ def get_batch(x, f):
     )
 
 
-def update_batch(x, f): 
+def update_batch(x, f, p): 
     """
     Update the batch data for a specific feature in the store.
     
@@ -167,8 +165,6 @@ def update_batch(x, f):
     >>> feature = 'sum'
     >>> update_batch(x, feature)
     """
-
-def update_batch(x, f, p):
     with open(store_path, "rb") as file:
         info = pickle.load(file)
     dq = deque(
@@ -883,7 +879,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
                 print("Seasonality period is? " + str(seasonality_period))
 
                 # further check in the case the seasonality pattern is complex and cannot be detected
-                if seasonality_period == None:
+                if seasonality_period is None:
                     # (output: period of the seasonality None if no seasonalaty was detected.
                     seasonality_period = detect_seasonality_fft(feature)
                     print(
@@ -915,7 +911,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
                 )  # Set default to False if not provided
 
                 if make_stationary and (not is_stationary):
-                    if decompositions != None:
+                    if decompositions is not None:
                         feature = make_stationary_decomp(feature, decompositions)
                         is_stationary = adf_test(feature.dropna())
                         print(
@@ -923,7 +919,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
                             + str(is_stationary)
                         )
                         if not is_stationary:
-                            if seasonality_period == None:
+                            if seasonality_period is None:
                                 feature = make_stationary_diff(
                                     feature, seasonality_period=[7]
                                 )  # default weekly
@@ -937,7 +933,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
                                 + str(is_stationary)
                             )
                     else:
-                        if seasonality_period == None:
+                        if seasonality_period is None:
                             feature = make_stationary_diff(
                                 feature, seasonality_period=[7]
                             )  # default weekly
@@ -952,16 +948,16 @@ def feature_engineering_pipeline(dataframe, kwargs):
                         )
 
                 if detrend:
-                    if decompositions != None:
+                    if decompositions is not None:
                         feature = rest_trend(feature, decompositions)
                     else:
                         feature = make_stationary_diff(feature)
 
                 if deseasonalize:
-                    if decompositions != None:
+                    if decompositions is not None:
                         feature = rest_seasonality(feature, decompositions)
                     else:
-                        if seasonality_period == None:
+                        if seasonality_period is None:
                             feature = make_stationary_diff(
                                 feature, seasonality_period=[7]
                             )  # default weekly
@@ -970,11 +966,11 @@ def feature_engineering_pipeline(dataframe, kwargs):
                                 feature, seasonality_period=[seasonality_period]
                             )
                 if get_residuals:
-                    if decompositions != None:
+                    if decompositions is not None:
                         feature = get_residuals_func(feature, decompositions)
                     else:
                         feature = make_stationary_diff(feature)
-                        if seasonality_period == None:
+                        if seasonality_period is None:
                             feature = make_stationary_diff(
                                 feature, seasonality_period=[7]
                             )  # default weekly
@@ -1131,7 +1127,7 @@ def seasonal_additive_decomposition(dataframe, period):
     series = dataframe.dropna()
 
     if len(series) < 2:  # Check if the series has at least 2 observations
-        print(f"Not enough data. Skipping decomposition.")
+        print("Not enough data. Skipping decomposition.")
         return None
 
     if period == None:
@@ -1140,7 +1136,7 @@ def seasonal_additive_decomposition(dataframe, period):
     if (
         len(series) < 2 * period
     ):  # Ensure enough data points for at least two full cycles
-        print(f"Not enough data for two full cycles. Skipping decomposition.")
+        print("Not enough data for two full cycles. Skipping decomposition.")
         return None
 
     # Classical decomposition (additive model)
@@ -1605,13 +1601,13 @@ def tdnn_forecasting_prediction(
     time_indexes = time_indexes.dt.tz_localize(None)
 
     # Get the last timestamp from time_indexes if timestamp_init is not given
-    if timestamp_init == None:
+    if timestamp_init is None:
         timestamp_init = time_indexes.iloc[-1] + pd.DateOffset(days=1)
     else:
         timestamp_init = pd.to_datetime(timestamp_init)
 
     # Predict for next 7 days if timestamp_end is not given
-    if timestamp_end == None:
+    if timestamp_end is None:
         timestamp_end = timestamp_init + pd.DateOffset(days=7)
     else:
         timestamp_end = pd.to_datetime(timestamp_end)

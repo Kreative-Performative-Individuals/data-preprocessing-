@@ -1,6 +1,9 @@
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 import sys
 import pandas as pd
 import numpy as np
+import json
+import warnings
 
 sys.path.append("C:\\Users\\mcapo\\data-preprocessing-\\data-preprocessing-")
 from dataprocessing_functions import (
@@ -14,7 +17,7 @@ from dataprocessing_functions import (
     imputer,
     get_counter,
     faulty_aq_tol,
-    update_batch,
+    #update_batch,
 )
 from datetime import datetime
 from collections import OrderedDict
@@ -70,12 +73,12 @@ def validate(x):
                     else:
                         update_counter(x)
                         break
-            if any_nan == False:
+            if not any_nan:
                 # it means that the datapoint is consistent and it doesn't have nan values --> it is perfect.
                 update_counter(x, True)  # reset the counter.
         else:  # it means that some feature are consistent and some not. Put at nan the not consistent ones.
             for f, c in zip(features, cc):
-                if c == False:
+                if not c:
                     x[f] = np.nan
             update_counter(x)
         x["status"] = "A/N"
@@ -114,8 +117,6 @@ def check_range_ai(x):
     return flag
 
 
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-
 
 def predict_missing(batch):
     seasonality = 7
@@ -136,39 +137,6 @@ def predict_missing(batch):
         )  # Leave the feature as nan since we don't have any information in the batch to make the imputation. If the datapoint has a nan because the feature is not definable for it, it will be leaved as it is from the imputator.
 
 
-# ______________________________________________________________________________________________
-# This function is the one managing the imputation for all the features of the data point  receives as an input the new data point, extracts the information
-
-
-def imputer(x):
-    if x:
-        if isinstance(x, tuple):
-            x = x[0]
-            # Because the validated datapoint may exit in the check range with 2 returned values.
-
-        # Try imputation with mean or the HWES model.
-        for f in features:
-            batch = get_batch(x, f)
-            if pd.isna(x[f]):
-                x[f] = predict_missing(batch)
-
-        # Check again the consistency of features and the range.
-        if check_f_consistency(x) and check_range_ai(x):
-            pass
-        else:  # It means that the imputed data point has not passed the check on the features and on their expected range.
-            # In this case we use the LVCF as a method of imputation since it ensures the respect of these conditiono (the last point in the batch has been preiovusly checked)
-            for f in features:
-                batch = get_batch(x, f)
-                x[f] = batch[-1]
-
-        # In the end update batches with the new data point
-        for f in features:
-            update_batch(x, f, x[f])
-
-        return x
-
-
-import json
 
 with open(
     "C:\\Users\\mcapo\\Desktop\\Smart app project\\definitive\\definitivo_3\\transformation_interrupted.json",
@@ -179,8 +147,6 @@ with open(
 cleaned_df = pd.DataFrame(in_data[1])
 start_i = in_data[2]
 df = pd.DataFrame(in_data[0])
-
-import warnings
 
 warnings.filterwarnings("ignore")
 length = df.shape[0] // 4
