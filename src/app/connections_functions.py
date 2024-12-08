@@ -6,9 +6,9 @@ import src.app.config as config
 def get_datapoint(i):
     # In some manner receives data point as a dictionary of form
 
-    with open(config.CLEANED_PREDICTED_DATA_PATH, "r") as json_file:
+    with open(config.SYNTHETIC_DATA_PATH, "r") as json_file:
         data = json.load(json_file)
-        stream_data = data
+        stream_data = data[1]
     datapoint = {
         "time": stream_data["time"][i],
         "asset_id": stream_data["asset_id"][i],
