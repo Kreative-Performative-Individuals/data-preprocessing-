@@ -21,7 +21,7 @@ from connections_functions import (
 import warnings
 
 warnings.filterwarnings("ignore")
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 
 # initializing the anomaly detector
@@ -48,13 +48,13 @@ while c < 480:  # loops continuosly
 
     if cleaned_datapoint:
         # we now check if some drift has been detected
-        if check_drift == True:
+        if check_drift:
             drift_flag = ADWIN_drift(cleaned_datapoint)
 
             # we call the database to extract historical data
 
-            if drift_flag == True:
-                print(f"Detected DRIFT")
+            if drift_flag:
+                print("Detected DRIFT")
                 historical_data = get_historical_data(
                     cleaned_datapoint["name"],
                     cleaned_datapoint["asset_id"],
@@ -81,7 +81,7 @@ while c < 480:  # loops continuosly
                 #             models[feature_name] = model_info
                 # update_model_forecast(cleaned_datapoint, models) #a dictionary with models for each feature are stored
                 check_drift = False
-        if check_drift == False:
+        if not check_drift:
             from_drift += 1
             if from_drift > 7:
                 from_drift = 0
