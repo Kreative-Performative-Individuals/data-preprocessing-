@@ -1,7 +1,6 @@
 import json
-from time import sleep
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from datetime import datetime
 from typing import Optional
 from src.app.on_request_pipeline import get_request
@@ -10,7 +9,7 @@ from src.app.real_time.request import KPIStreamingRequest, KPIValidator
 from src.app.real_time.message import RealTimeKPI
 import os
 from dotenv import load_dotenv
-from src.app.connections_functions import get_datapoint
+from src.app.connections_functions import get_next_datapoint
 from src.app.dataprocessing_functions import cleaning_pipeline
 import uvicorn
 import asyncio
@@ -61,19 +60,31 @@ def root():
 
 @app.get("/get_request")
 def get_request_callback(
-        machine_name: str = Query(..., description="Name of the machine"),
-        asset_id: str = Query(..., description="ID of the asset"),
-        kpi: str = Query(..., description="Key Performance Indicator"),
-        operation: str = Query(..., description="Type of operation"),
-        timestamp_start: datetime = Query(..., description="Start timestamp in ISO format"),
-        timestamp_end: datetime = Query(..., description="End timestamp in ISO format"),
-        transformation: Optional[str] = Query(None, description="Transformation type (e.g., 'S', 'T')"),
-        forecasting: bool = Query(False, description="Enable forecasting (true/false)"),
+    machine_name: str = Query(..., description="Name of the machine"),
+    asset_id: str = Query(..., description="ID of the asset"),
+    kpi: str = Query(..., description="Key Performance Indicator"),
+    operation: str = Query(..., description="Type of operation"),
+    timestamp_start: datetime = Query(..., description="Start timestamp in ISO format"),
+    timestamp_end: datetime = Query(..., description="End timestamp in ISO format"),
+    transformation: Optional[str] = Query(
+        None, description="Transformation type (e.g., 'S', 'T')"
+    ),
+    forecasting: bool = Query(False, description="Enable forecasting (true/false)"),
 ):
-    result = get_request(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end, transformation,
-                         forecasting)
-
-    return result
+    try:
+        json_transformed_data = get_request(
+            machine_name,
+            asset_id,
+            kpi,
+            operation,
+            timestamp_start,
+            timestamp_end,
+            transformation,
+            forecasting,
+        )
+        return json_transformed_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/real-time/start")
@@ -83,7 +94,7 @@ async def real_time_streaming_start(kpi_streaming_request: KPIStreamingRequest):
         return {"message": "Task is already running!"}
 
     stop_event.clear()
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
     # Get the current running event loop and create the task inside it
     background_task = asyncio.create_task(send_kpis(kpi_streaming_request))
 
@@ -93,32 +104,59 @@ async def real_time_streaming_start(kpi_streaming_request: KPIStreamingRequest):
 async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
     global stop_event
     i = 0
-    accumulated_data = []
-    kpi_validator = KPIValidator.from_streaming_request(kpi_streaming_request)
-    ready_request_size = kpi_validator.kpi_count
 
-    print("Starting the real-time streaming... stop_event: ", stop_event.is_set())
+    try:
+        kpi_validator = KPIValidator.from_streaming_request(kpi_streaming_request)
+    except Exception as e:
+        print(f"Error initializing KPIValidator: {e}")
+        return
+
+    accumulated_data = {kpi: ("", []) for kpi in kpi_validator.kpis}
+
+    iterator = get_next_datapoint()
 
     while not stop_event.is_set():
+        try:
+            # Fetch and process the data point
+            raw_data = next(iterator)
+            cleaned_data = cleaning_pipeline(raw_data)
 
-        cleaned_data = cleaning_pipeline(get_datapoint(i))
-        # if kpi_validator.validate(cleaned_data):
-        aggregation_column = kpi_validator.get_aggregation_from_kpi(cleaned_data["kpi"])
-        real_time_kpi = RealTimeKPI.from_dictionary(cleaned_data, aggregation_column)
-        accumulated_data.append(real_time_kpi.to_json())
+            if cleaned_data is None:
+                print(f"Data point {i} could not be fetched. Skipping...")
+                continue
 
-        if ready_request_size == len(accumulated_data):
-            try:
-                message = json.dumps(accumulated_data).encode("utf-8")
-                await publisher.aioproducer.send_and_wait(publisher._topic, message)
-                print(f"Message of length {ready_request_size} sent.")
-            except Exception as e:
-                print(f"Error while sending message: {e}")
-                stop_event.set()
-            accumulated_data = []
+            kpi_name = cleaned_data["kpi"]
+            if kpi_validator.validate(cleaned_data):
+                aggregation_column = kpi_validator.get_aggregation_from_kpi(kpi_name)
+                accumulated_data[kpi_name] = (
+                    aggregation_column,
+                    accumulated_data[kpi_name][1] + [cleaned_data[aggregation_column]],
+                )
+
+            # Check readiness of all KPIs
+            if all(
+                len(data[1]) == kpi_validator.machine_count
+                for data in accumulated_data.values()
+            ):
+                message = [
+                    RealTimeKPI(kpi, column, values).to_json()
+                    for kpi, (column, values) in accumulated_data.items()
+                ]
+                for kpi in accumulated_data.keys():
+                    accumulated_data[kpi] = ("", [])
+                await publisher.aioproducer.send_and_wait(
+                    publisher._topic, json.dumps(message).encode("utf-8")
+                )
+
+        except Exception as e:
+            print(f"Error in loop: {e}")
+            stop_event.set()
+            break
 
         i = (i + 1) % BATCH_SIZE
-        await asyncio.sleep(2)
+        # await asyncio.sleep(0.1)
+
+    print("Exiting KPI streaming loop.")
 
 
 @app.get("/real-time/stop")

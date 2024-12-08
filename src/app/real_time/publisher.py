@@ -1,4 +1,5 @@
 """ Kafka publisher. """
+
 import asyncio
 from aiokafka import AIOKafkaProducer
 from src.app.real_time.message import RealTimeKPI
@@ -19,8 +20,7 @@ class KafkaPublisher:
         loop = asyncio.get_event_loop()
 
         return AIOKafkaProducer(
-            loop=loop,
-            bootstrap_servers=f'{self._servers}:{self._port}'
+            loop=loop, bootstrap_servers=f"{self._servers}:{self._port}"
         )
 
     async def send(self, data: list[RealTimeKPI], stop_event):
@@ -29,11 +29,11 @@ class KafkaPublisher:
         except Exception as e:
             await self.aioproducer.stop()
             stop_event.set()
-        return 'Message sent successfully'
+        return "Message sent successfully"
 
     async def finalize(self):
         await self.aioproducer.stop()
-        return 'Kafka producer stopped'
+        return "Kafka producer stopped"
 
     @property
     def topic(self):

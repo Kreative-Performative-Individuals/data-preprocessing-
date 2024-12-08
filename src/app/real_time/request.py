@@ -17,13 +17,14 @@ class KPIValidator:
         self.machines = machines
         self.operations = operations
         self.kpi_count = len(kpis)
+        self.machine_count = len(machines)
 
     @classmethod
     def from_streaming_request(cls, kpi_streaming_request: KPIStreamingRequest):
         return cls(
             kpis=kpi_streaming_request.kpis,
             machines=kpi_streaming_request.machines,
-            operations=kpi_streaming_request.operations
+            operations=kpi_streaming_request.operations,
         )
 
     def validate(self, cleaned_data: dict):
@@ -35,10 +36,12 @@ class KPIValidator:
             print("The sensor didn't send the correct data.")
             return False
 
-        return (kpi in self.kpis.keys()
-                and machine in self.machines
-                and operation in self.operations
-                and cleaned_data[self.get_aggregation_from_kpi(kpi)] is not None)
+        return (
+            kpi in self.kpis.keys()
+            and machine in self.machines
+            and operation in self.operations
+            and cleaned_data[self.get_aggregation_from_kpi(kpi)] is not None
+        )
 
     def get_aggregation_from_kpi(self, kpi: str):
         return self.kpis[kpi]

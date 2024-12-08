@@ -28,6 +28,15 @@ optuna = "^4.1.0"
 scikit-learn = "^1.5.2"
 statsmodels = "^0.14.4"
 tensorflow = "^2.18.0"
+matplotlib = "^3.9.3"
+jupyter = "^1.1.1"
+
+[tool.poetry.dev-dependencies]
+black = "^24.3"         # Code formatter
+ruff = "^0.7.4"
+
+[tool.ruff]
+line-length = 100
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
