@@ -17,20 +17,23 @@ from keras.optimizers import Adam
 from keras.models import model_from_json
 from river import drift
 import optuna
-from src.app.connections_functions import send_alert, store_datapoint
+from connection_functions import send_alert, store_datapoint
 import pickle
 import os
-import src.app.config as config
+import config
 import matplotlib.pyplot as plt
 
-"""'
+''''
 ________________________________________________________________________________________________________
 
 GLOBAL VARIABLES AND FUNCTIONS FOR INFORMATION MANAGING 
 ________________________________________________________________________________________________________
-"""
-""" In this code we stored the functions that were used in the info manager section of the
-preprocessing pipeline, including a brief description of their inputs, outputs and functioning"""
+'''
+''' In this piece of code there are the global variables that will be used in several functions deputed to the
+whole preprocessing stage. In addition 'machine' and 'KPIs' will map the tassonomy defined by topic 1, particularly only
+'pure' KPIs (the one that we expect to receive directly from machines) for the actual machines present in the company 
+(information extracted from the provided dataset). Future development may involve the connection with an internal tassonomy of the knowledge base in such a way to provide a dynamic adaptation
+of the processing pipeline to the addition of new machines or kpi. '''
 
 fields = [
     "time",
@@ -46,9 +49,6 @@ fields = [
 ]
 identity = ["asset_id", "name", "kpi", "operation"]
 features = ["sum", "avg", "min", "max", "var"]
-store_path = config.STORE_PKL
-store_path_forecasting = "forecasting_models.pkl"
-data_path = "synthetic_data.json"
 b_length = 40
 faulty_aq_tol = 3
 
@@ -68,6 +68,26 @@ machine = {
     "riveting": ["ast-o8xtn5xa8y87"],
 }
 
+# The following dictionary is organized as follows: for each type of kpi [key], the corrisponding value is a list of two elements:
+# - min and max of the expected range. Current implementation involves the definition of a single range for all the machine types. 
+# - operation modality that the KPI can offer.
+
+kpi = {
+    "time": [
+        [0, 86400],
+        ["working", "idle", "offline"],
+    ],  # As indicated in the taxonomy the time is reported in seconds.
+    "consumption": [[0, 500000], ["working", "idle", "offline"]],  # KWh
+    "power": [[0, 200000], ["independent"]],  # KW
+    "emission_factor": [[0, 3], ["independent"]],  # kg/kWh
+    "cycles": [[0, 300000], ["working"]],  # number
+    "average_cycle_time": [[0, 4000], ["working"]],  # seconds
+    "good_cycles": [[0, 300000], ["working"]],  # number
+    "bad_cycles": [[0, 300000], ["working"]],  # number
+    "cost": [[0, 1], ["independent"]],  # euro/kWh
+}
+
+
 ML_algorithms_config = {
     "forecasting_ffnn": {
         "make_stationary": True,  # Default: False
@@ -83,23 +103,6 @@ ML_algorithms_config = {
         "get_residuals": False,  # Default: False
         "scaler": False,  # Default: False
     },
-}
-
-# The following dictionary is organized as follows: for each type of kpi [key], the corrisponding value is a list of two elements - min and max of the expected range.
-# We consider in this dictionary only 'pure' kpis that we expect from machines directly, as indicated in the tassonomy produced by the topic 1.
-kpi = {
-    "time": [
-        [0, 86400],
-        ["working", "idle", "offline"],
-    ],  # As indicated in the taxonomy the time is reported in seconds.
-    "consumption": [[0, 500000], ["working", "idle", "offline"]],  # KWh
-    "power": [[0, 200000], ["independent"]],  # KW
-    "emission_factor": [[0, 3], ["independent"]],  # kg/kWh
-    "cycles": [[0, 300000], ["working"]],  # number
-    "average_cycle_time": [[0, 4000], ["working"]],  # seconds
-    "good_cycles": [[0, 300000], ["working"]],  # number
-    "bad_cycles": [[0, 300000], ["working"]],  # number
-    "cost": [[0, 1], ["independent"]],  # euro/kWh
 }
 
 
@@ -130,7 +133,7 @@ def get_batch(x, f):
     >>> get_batch(current_datapoint, feature)
     [0.5, 0.6, 0.7, 0.8]
     """    
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     # This function will return batch
     return list(
@@ -138,7 +141,7 @@ def get_batch(x, f):
     )
 
 
-def update_batch(x, f, p): 
+def update_batch(x, f): 
     """
     Update the batch data for a specific feature in the store.
     
@@ -165,12 +168,12 @@ def update_batch(x, f, p):
     >>> feature = 'sum'
     >>> update_batch(x, feature)
     """
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     dq = deque(
         info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][0][features.index(f)]
     )
-    dq.append(p)
+    dq.append(x[f])
 
     if len(dq) > b_length:
         dq.popleft()
@@ -179,7 +182,7 @@ def update_batch(x, f, p):
         list(dq)
     )
 
-    with open(store_path, "wb") as file:
+    with open(config.STORE_PKL, "wb") as file:
         pickle.dump(info, file)
 
 
@@ -212,14 +215,14 @@ def update_counter(x, reset=False):
     >>> update_counter(current_datapoint, reset=True)   # counter becomes 0
     """
         
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     if not reset:
         info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][1] += 1
     else:
         info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][1] = 0
 
-    with open(store_path, "wb") as file:
+    with open(config.STORE_PKL, "wb") as file:
         pickle.dump(info, file)
 
 
@@ -248,16 +251,14 @@ def get_counter(x):
     2  # Returns the current counter value for the specified operation
     """
     
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     return info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][1]
 
 
-def get_model_ad(
-    x,
-):  # id should contain the identity of the kpi about whihc we are storing the model
+def get_model_ad(x):  # id should contain the identity of the kpi about whihc we are storing the model
     # [it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     return info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][2]
 
@@ -289,11 +290,11 @@ def update_model_ad(x, model):
     >>> update_model_ad(x, model)
     """
 
-    with open(store_path, "rb") as file:
+    with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][2] = model
 
-    with open(store_path, "wb") as file:
+    with open(config.STORE_PKL, "wb") as file:
         pickle.dump(info, file)
 
 
@@ -305,7 +306,7 @@ def update_model_ad(x, model):
 
 def get_model_forecast(x):
     # Load the Pickle file
-    with open(store_path_forecasting, "rb") as f:
+    with open(config.FORECASTING_MODELS_PKL, "rb") as f:
         all_models_data = pickle.load(f)
 
     # Navigate to the specific model based on the x keys
@@ -347,8 +348,8 @@ def update_model_forecast(x, model):
     """
 
     # Load the existing data from the Pickle file if it exists
-    if os.path.exists(store_path_forecasting):
-        with open(store_path_forecasting, "rb") as f:
+    if os.path.exists(config.FORECASTING_MODELS_PKL):
+        with open(config.FORECASTING_MODELS_PKL, "rb") as f:
             all_models_data = pickle.load(f)
     else:
         all_models_data = {}
@@ -385,20 +386,21 @@ def update_model_forecast(x, model):
         }
 
     # Save the updated data back to the Pickle file
-    with open(store_path_forecasting, "wb") as f:
+    with open(config.FORECASTING_MODELS_PKL, "wb") as f:
         pickle.dump(all_models_data, f)
 
-    print(f"Models updated successfully in {store_path_forecasting}")
+    print(f"Models updated successfully in {config.FORECASTING_MODELS_PKL}")
 
 
-"""'
+
+'''
 ________________________________________________________________________________________________________
 
 FUNCTIONS FOR DATA CLEANING
 ________________________________________________________________________________________________________
-"""
-""" In this code we stored the functions that were used in the cleaning section of the
-preprocessing pipeline, including a brief description of their inputs, outputs and functioning"""
+
+In this piece of code there are functions related to the validation, imputation processes and related sub-operations.'''
+
 
 # ______________________________________________________________________________________________
 # This function takes in input the data point that we are receiving and checks the reliability
@@ -409,39 +411,6 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 
 def check_f_consistency(x):
-    indicator = [True, True, True, True]
-    if not pd.isna(x["min"]) and not pd.isna(x["avg"]):
-        if x["min"] > x["avg"]:
-            indicator[2] = False
-            indicator[1] = False
-    if not pd.isna(x["min"]) and not pd.isna(["max"]):
-        if x["min"] > x["max"]:
-            indicator[2] = False
-            indicator[3] = False
-    if not pd.isna(x["min"]) and not pd.isna(x["sum"]):
-        if x["min"] > x["sum"]:
-            indicator[2] = False
-            indicator[0] = False
-    if not pd.isna(x["avg"]) and not pd.isna(x["max"]):
-        if x["avg"] > x["max"]:
-            indicator[1] = False
-            indicator[3] = False
-    if not pd.isna(x["avg"]) and not pd.isna(x["sum"]):
-        if x["avg"] > x["sum"]:
-            indicator[1] = False
-            indicator[0] = False
-    if not pd.isna(x["max"]) and not pd.isna(x["sum"]):
-        if x["max"] > x["sum"]:
-            indicator[0] = False
-            indicator[3] = False
-    if pd.isna(x["sum"]):
-        indicator[0] = False
-    if pd.isna(x["avg"]):
-        indicator[1] = False
-    if pd.isna(x["min"]):
-        indicator[2] = False
-    if pd.isna(x["max"]):
-        indicator[3] = False
     """
     Check the consistency of statistical values (min, avg, max, sum) for a given data point.
     

@@ -1,67 +1,68 @@
-from src.app.dataprocessing_functions import cleaning_pipeline
-from src.app.dataprocessing_functions import ad_predict, ad_train
-from src.app.dataprocessing_functions import ADWIN_drift
-from src.app.dataprocessing_functions import tdnn_forecasting_training
-from src.app.dataprocessing_functions import (
-    get_model_ad,
-    update_model_forecast,
-    update_model_ad,
-    identity,
-)
-from src.app.connections_functions import (
-    get_datapoint,
-    get_historical_data,
-    send_alert,
-    store_datapoint,
-)
+from dataprocessing_functions import cleaning_pipeline
+from dataprocessing_functions import ad_predict, ad_train
+from dataprocessing_functions import ADWIN_drift
+from dataprocessing_functions import tdnn_forecasting_training
+from dataprocessing_functions import get_model_ad, update_model_forecast, update_model_ad, identity
+from connection_functions import get_datapoint, get_historical_data, send_alert, store_datapoint
 
-# initializing the anomaly detector
+import warnings
+warnings.filterwarnings("ignore")
+import numpy as np
 
-while True:  # loops continuosly
 
-    # first we call get_datapoint and we wait for a new input to arrive
-    new_datapoint = get_datapoint(10)  ## CONNECTION WITH API
+c = 0
+from_drift=0
+check_drift=True
 
-    # once the new data point is aquired we clean it
-    cleaned_datapoint = cleaning_pipeline(new_datapoint)
+while c<10:
+    new_datapoint = get_datapoint(c) ## CONNECTION WITH API
+    print(f"\n{new_datapoint}")
 
-    # we now check if some drift has been detected
-    drift_flag = ADWIN_drift(cleaned_datapoint)
+    # cleaned_datapoint = cleaning_pipeline(new_datapoint)
 
-    # we call the database to extract historical data
-    historical_data = get_historical_data(
-        cleaned_datapoint["name"],
-        cleaned_datapoint["asset_id"],
-        cleaned_datapoint["kpi"],
-        cleaned_datapoint["operation"],
-        None,
-        None,
-    )  ## CONNECTION WITH API
+    # if cleaned_datapoint:
+    #     #we now check if some drift has been detected
+    #     if check_drift==True:    
+    #         drift_flag=ADWIN_drift(cleaned_datapoint)
 
-    if drift_flag == True:
-        # retrain anomaly detection model
-        model = ad_train(
-            historical_data
-        )  # Here we should put the get_historical_data()
-        update_model_ad(cleaned_datapoint, model)
+    #         #we call the database to extract historical data
 
-        # retrain forecasting algorithm model
-        model_info = tdnn_forecasting_training(
-            historical_data
-        )  # contains [best_model_TDNN, best_params, stats] #Here we should put the get_historical_data()
-        update_model_forecast(cleaned_datapoint, model_info)
+    #         if drift_flag==True:
+    #             print(f"Detected DRIFT")
+    #             historical_data = get_historical_data(cleaned_datapoint['name'], cleaned_datapoint['asset_id'], cleaned_datapoint['kpi'], cleaned_datapoint['operation'], -1 , cleaned_datapoint['time']) ## CONNECTION WITH API
 
-    # Anomalies detection branch
-    # get de model
-    ad_model = get_model_ad(cleaned_datapoint)
-    # predict class
-    cleaned_datapoint["status"], anomaly_score = ad_predict(cleaned_datapoint, ad_model)
+    #             #retrain anomaly detection model
+    #             model=ad_train(historical_data) #Here we should put the get_historical_data()
+    #             update_model_ad(cleaned_datapoint, model)
 
-    if cleaned_datapoint["status"] == "Anomaly":
-        anomaly_identity = {
-            key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint
-        }
+    #             #retrain forecasting algorithm model
+    #             models = {}
+    #             for feature_name in features:
+    #                 # Check if the column exists in the DataFrame
+    #                 if feature_name in historical_data.columns:
+    #                     feature = historical_data[['time',feature_name]]
+    #                     if not (feature[feature_name].empty or feature[feature_name].isna().all() or feature[feature_name].isnull().all()):
+    #                         model_info = tdnn_forecasting_training(feature)  #contains [best_model_TDNN, best_params, stats] 
+    #                         models[feature_name] = model_info
+    #             update_model_forecast(cleaned_datapoint, models) #a dictionary with models for each feature are stored
+    #             check_drift=False
+    #     if check_drift==False:
+    #         from_drift+=1    
+    #         if from_drift>7:
+    #             from_drift=0
+    #             check_drift=True
+    #             print('I can check the drift again')
+    #     #Anomalies detection branch 
+    #     # get de model    
+    #     ad_model= get_model_ad(cleaned_datapoint)
 
-        send_alert(anomaly_identity, "Anomaly")
+    #     #predict class
+    #     cleaned_datapoint['status'], anomaly_score=ad_predict(cleaned_datapoint , ad_model)
 
-    store_datapoint(cleaned_datapoint)  ## CONNECTION WITH API
+    #     if cleaned_datapoint['status']=="Anomaly":
+    #         anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
+            
+    #         send_alert(anomaly_identity, 'Anomaly', None, anomaly_score)
+        
+    # store_datapoint(new_datapoint) ## CONNECTION WITH API
+    c += 1
