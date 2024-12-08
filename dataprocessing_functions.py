@@ -22,7 +22,7 @@ import optuna
 from connections_functions import send_alert, store_datapoint
 import pickle
 import os
-
+import matplotlib.pyplot as plt 
 
 ''''
 ________________________________________________________________________________________________________
@@ -666,7 +666,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
                             feature = make_stationary_diff(feature, seasonality_period=[seasonality_period])
                 if get_residuals:
                     if decompositions != None:
-                        feature = get_residuals(feature, decompositions)
+                        feature = get_residuals_func(feature, decompositions)
                     else:
                         feature = make_stationary_diff(feature)
                         if seasonality_period == None:
@@ -823,10 +823,10 @@ def seasonal_additive_decomposition(dataframe, period):
         decomposition = seasonal_decompose(series, model='additive', period=period)
 
         #Plot the decomposition
-        #plt.figure(figsize=(10, 8))
-       # decomposition.plot()
-        #plt.suptitle(f'Classical Decomposition of Time Series', fontsize=16)
-        #plt.show()
+        '''plt.figure(figsize=(10, 8))
+        decomposition.plot()
+        plt.suptitle(f'Classical Decomposition of Time Series', fontsize=16)
+        plt.show()'''
 
         # Access the individual components
         trend = decomposition.trend
@@ -850,7 +850,7 @@ def seasonal_additive_decomposition(dataframe, period):
 def make_stationary_decomp(df, decompositions):
     # Initialize the stationary series with the original data
     stationary_series = df.copy()
-
+    baseline = df.median()
     # Subtract seasonal and trend components from the original data for each seasonality
     for decomposition in decompositions:
         trend = decomposition[0]
@@ -863,6 +863,7 @@ def make_stationary_decomp(df, decompositions):
         stationary_series -= seasonal  # Subtract seasonal component
         stationary_series -= trend_filled  # Subtract trend component
 
+    stationary_series += baseline
     return stationary_series
 
 
@@ -911,7 +912,7 @@ def make_stationary_diff(df, seasonality_period=[]):
 def rest_trend(df, decompositions):
     # Initialize the detrended series with the original data
     detrended_series= df.copy()
-
+    baseline = df.median()
     # Subtract seasonal and trend components from the original data for each seasonality
     for decomposition in decompositions:
         trend = decomposition[0]
@@ -922,6 +923,7 @@ def rest_trend(df, decompositions):
         # Remove trend component for the current period
         detrended_series -= trend_filled  # Subtract trend component
 
+    detrended_series += baseline
     return detrended_series
 
 # ______________________________________________________________________________________________
@@ -950,7 +952,7 @@ def rest_seasonality(df, decompositions):
 # time serie.
 
 
-def get_residuals(df, decompositions):
+def get_residuals_func(df, decompositions):
     # Ensure decompositions is not empty
     if not decompositions or len(decompositions) == 0:
         raise ValueError("Decompositions data is missing or empty.")
