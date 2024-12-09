@@ -17,10 +17,10 @@ from keras.optimizers import Adam
 from keras.models import model_from_json
 from river import drift
 import optuna
-from connection_functions import send_alert, store_datapoint
+from src.app.connection_functions import send_alert, store_datapoint
 import pickle
 import os
-import config
+import src.app.config as config
 import matplotlib.pyplot as plt
 
 ''''

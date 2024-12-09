@@ -91,9 +91,9 @@
         <a href="#introduction">Introduction</a>
         <a href="#methods-and-documentation">Methods and Documentation</a>
         <ul>
+			<li><a href="#connections_functions">connections_functions.py</a></li>
             <li><a href="#on_request_pipeline">on_request_pipeline.py</a></li>
             <li><a href="#streaming_pipeline">streaming_pipeline.py</a></li>
-            <li><a href="#connections_functions">connections_functions.py</a></li>
             <li><a href="#dataprocessing_functions">dataprocessing_functions.py</a></li>
         </ul>
     </nav>
@@ -142,7 +142,7 @@
 				In the folder <code>data</code>, JSON files (such as <code>cleaned_predicted_dataset.json</code> and 
 				<code>historical_dataset.json</code> that are used as a mockup for historical data, 
 				<code>original_adapted_dataset.json</code> exploited to simulate the stream) can be found that are 
-				useful to mock connections and test the pipeline by its own.
+				useful to mock connections and test the pipeline by its own. Also, there is the file 'store.pkl' that is used as a local store for useful structures that are used by other functions of the pipelines (batches for imputation and drift detection, AnomalyDetector models, TDNN models for forecasting)
 			</li>
 			<li>
 				In the folder <code>notification</code> there is the file <code>mail_sender.py</code> containing the 
@@ -150,14 +150,130 @@
 			</li>
 		</ul>
 
+
+
+
+
         <h2 id="methods-and-documentation">Methods and Documentation</h2>
+
+
+
+
+		<h3 id="connection_functions">connection_functions.py</h3>
+
+		<ul>
+			<li><h4>Function: <code>get_datapoint(i)</code></h4>
+				<p><strong>Description:</strong> fetches a single data from the stream dataset (original_adapted_dataset.json) based on the provided index.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>i</kbd> (<em>int</em>): The index of the data point to retrieve.</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>A dictionary containing the single datapoint as a dictionary with keys (<kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, <kbd>operation</kbd>, and feature values).</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>datapoint = get_datapoint(5)
+	{'time': '2024-09-17 00:00:00+00:00',
+	 'asset_id': 'ast-sfio4727eub0',
+	 'name': 'assembly',
+	 'kpi': 'consumption',
+	 'operation': 'idle',
+	 'sum': 0.0,
+	 'avg': 0.0,
+	 'min': 0.0,
+	 'max': 0.0,
+	 'var': nan,
+	 'status': nan}
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end)</code></h4>
+				<p><strong>Description:</strong> Retrieves historical data filtered based on machine identity, KPI, and operation over a specified time range.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>machine_name</kbd> (<em>str</em>): Name of the machine.</li>
+					<li><kbd>asset_id</kbd> (<em>str</em>): Identifier of the asset.</li>
+					<li><kbd>kpi</kbd> (<em>str</em>): Key Performance Indicator to filter.</li>
+					<li><kbd>operation</kbd> (<em>str</em>): Operation type to filter (e.g., "working").</li>
+					<li><kbd>timestamp_start</kbd> (<em>str</em>): Start of the time range. Default is set at a predefined number of days before the 'timestamp_end' (e.g., 100).</li>
+					<li><kbd>timestamp_end</kbd> (<em>str</em>): End of the time range. Default is set to the timestamp of the last datapoint in the historical data. </li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>A Pandas DataFrame containing the filtered historical data.</p>
+			
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>historical_data = get_historical_data(
+		machine_name="Large Cutting Machine 1",
+		asset_id="ast-yhccl1zjue2t",
+		kpi="time",
+		operation="working",
+		timestamp_start='2024-08-17 00:00:00+00:00',
+		timestamp_end='2024-10-17 00:00:00+00:00'
+	)
+	
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>send_alert(identity, type, counter=None, probability=None)</code></h4>
+				<p><strong>Description:</strong> Sends an alert notification via mail whenever an anomaly or acquisition malfunctioning has been detected.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>identity</kbd> (<em>dict</em>): Machine name, asset identificator, KPI and operation of the datapoint for which the anomalous behavior has been detected.</li>
+					<li><kbd>type</kbd> (<em>str</em>): Type of alert, either <kbd>'Anomaly'</kbd> or <kbd>'Nan'</kbd>.</li>
+					<li><kbd>counter</kbd> (<em>int</em>, optional): Number of consecutive days in which the acquisition of datapoints for the specific KPI and machine has reported problems (used only for <kbd>'NaN'</kbd> type alerts).</li>
+					<li><kbd>probability</kbd> (<em>float</em>, optional): Probability for an anomaly to be correct (used for <kbd>'Anomaly'</kbd> type alerts).</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>None (it just sends a mail to user).</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>identity = {"name": "Large Metal Cutting Machine", "asset_id": "ast-yhccl1zjue2t", "kpi": "time", "operation": "working"}
+	>>>send_alert(identity, type="Anomaly", probability=95)
+	
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>store_datapoint(new_datapoint)</code></h4>
+				<p><strong>Description:</strong> Appends the processed datapoint to the already stored historical data.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>new_datapoint</kbd> (<em>dict</em>): A dictionary containing the new data point to be stored.</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>None</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>new_datapoint = {
+		'time': '2024-10-18 00:00:00+00:00',
+		'asset_id': 'ast-yhccl1zjue2t',
+		'name': 'Large Metal Cutting Machine',
+		'kpi': 'consumption',
+		'operation': 'working',
+		'sum': 0.175342,
+		'avg': 0.001883,
+		'min': 0.001000,
+		'max': 0.012461,
+		'var': 0.001000,
+		'status': 'Normal'
+	}
+	>>>store_datapoint(new_datapoint)
+	
+	</pre>
+			</li>
+
+
+			<hr style="border: 1px solid #000000; margin: 50px auto;">
 
 		<h3 id="on_request_pipeline">on_request_pipeline.py</h3>
 		
 		<ul>
 			<li><h4>Function: <code>get_request(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end, transformation, forecasting)</code></h4>
 				<p>
-					<strong>Description:</strong> Handles requests for historical data transformations or forecasting. Depending on the provided parameters, it either applies feature engineering transformations or performs time-series forecasting using machine learning models.
+					<strong>Description:</strong> Handles requests for historical data transformations or forecasting. Depending on the provided parameters, it either applies feature engineering transformations or performs time-series forecasting using a TDNN (time delay neural network).
 
 				<p><strong>Parameters:</strong></p>
 				<ul>
@@ -205,12 +321,12 @@
 				<p><strong>Example usage:</strong></p>
 				<pre>
 >>> json_forecast = get_request(
-	machine_name="metal_cutting",
+	machine_name="Large Metal Cutting Machine 1",
 	asset_id="ast-yhccl1zjue2t",
 	kpi="time",
 	operation="working",
-	timestap_start='2024-10-17',
-	timestamp_end='2024-10-24',
+	timestap_start="2024-10-17 00:00:00+00:00",
+	timestamp_end="2024-10-17 00:00:00+00:00",
 	transformation=None,
 	forecasting=True
 )
@@ -222,143 +338,45 @@
 		<hr style="border: 1px solid #000000; margin: 50px auto;">
 
 	<h3 id="streaming_pipeline">streaming_pipeline.py</h3>
-	<p>This script implements a real-time processing loop for handling streaming data points. It performs data cleaning, drift detection, anomaly detection, and model retraining when necessary. The processed data is then stored back into the database.</p>
-
-		
-	<p><strong>Overview</strong></p>
-    <p>The loop operates continuously, fetching new data points from a stream, processing them, and applying machine learning models for anomaly detection and forecasting. The workflow includes:</p>
+	<p>The loop continuously operates the following workflow: data acquisition, data cleaning, drift detection, model retraining upon positive result and anomaly identification for alert generation, storing in the database.</p>
     <ul>
-        <li>Data acquisition: fetches a new data point from the streaming API using the <kbd>get_datapoint</kbd> function. The fetched data point includes fields such as <kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, and statistical features like <kbd>sum</kbd>, <kbd>avg</kbd>, <kbd>min</kbd>, <kbd>max</kbd>, and <kbd>var</kbd>.
-		</li>
-        <li>Data cleaning: the fetched data point is cleaned using the <kbd>cleaning_pipeline</kbd> function to ensure consistency and validity. Invalid or missing values are imputed or flagged.
-		</li>
-        <li>Drift detection: checks for concept drift in the data using the <kbd>ADWIN_drift</kbd> function. If drift is detected, the anomaly detection and forecasting models are retrained.
-			.</li>
-        <li>Historical data retrieval: using <kbd>get_historical_data</kbd>.</li>
-        <li>Model retraining:  when drift is detected:
-            <ul>
-                <li>The anomaly detection model is retrained using <kbd>ad_train</kbd>, and the updated model is stored using <kbd>update_model_ad</kbd>.</li>
-                <li>The forecasting model is retrained for each feature using <kbd>tdnn_forecasting_training</kbd>, and the updated models are stored using <kbd>update_model_forecast</kbd>.</li>
-            </ul>
+        <li>
+            <strong>Data acquisition:</strong> fetches a new data point from the stream using the function <code>get_datapoint()</code> (in <code>\src\app\connection_functions.py</code>). 
+            The fetched datapoint includes the field ‘time’, identity fields (<code>asset_id</code>, <code>name</code>, <code>kpi</code>, <code>operation</code>) and feature fields (<code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code> and <code>var</code>).
         </li>
-        <li>Anomaly detection: the cleaned data point is classified as <kbd>'Anomaly'</kbd> or <kbd>'Normal'</kbd> using the <kbd>ad_predict</kbd> function. If an anomaly is detected, an alert is generated with details about the affected machine, KPI, and operation.</li>
-        <li>Send alert:  when anomalies are detected, the <kbd>send_alert</kbd> function notifies the user with the details and the probability of the anomaly being accurate.</li>
-        <li>Data storage: the processed data point is stored back into the database using the <kbd>store_datapoint</kbd> function to ensure an up-to-date data stream.</li>
+        <li>
+            <strong>Data cleaning:</strong> the validity of the fetched datapoint in terms of logic consistency and range, along with the imputation of missing values is performed into the <code>cleaning_pipeline()</code> function (in <code>\src\app\dataprocessing_functions.py</code>) that one after the other calls the specific functions for performing these operations (<code>validate()</code> and <code>imputer()</code>, also in <code>\src\app\dataprocessing_functions.py</code>). 
+            Altogether, these 3 functions also allow the implementation of another feature: whenever the specific timeseries being received (a time course of a specific KPI for a specific machine) embeds inconsistencies or fails the check range for a sufficient number of consecutive days (arbitrarily set at <code>faulty_aq_tol = 3</code>), then the pipeline calls the function <code>send_alert()</code> (in <code>\src\app\connection_functions.py</code>) to send the email to the user with the detected alert.
+        </li>
+        <li>
+            <strong>Drift detection:</strong> it uses the <code>ADWIN_drift()</code> (in <code>\src\app\dataprocessing_functions.py</code>) to check whether in the stream that is being received a concept drift has occurred which should trigger the retraining of models to avoid performance degradation. 
+            In particular, if the drift is recognized, then the code calls the two functions (from <code>\src\app\dataprocessing_functions.py</code>) deputed to the retraining:
+            <ul>
+                <li><code>ad_train()</code></li>
+                <li><code>tdnn_forecasting_training()</code></li>
+            </ul>
+            Then, the new models are stored in the <code>store.pkl</code> file (in <code>\data\store.pkl</code>) for the following usage.
+        </li>
+        <li>
+            <strong>Anomaly detection:</strong> the last train model of the Isolation Forest for the specific timeseries the current datapoint belongs to is retrieved and used to predict whether it is anomalous or not. 
+            Upon a positive result, the <code>send_alert()</code> function (in <code>\src\app\connection_functions.py</code>) is called to notify the event to the user.
+        </li>
+        <li>
+            <strong>Data storage:</strong> the function <code>store_datapoint()</code> (in <code>\src\app\connection_functions.py</code>) takes care of appending the current processed datapoint to the historical data.
+        </li>
     </ul>
-	
     
-	<hr style="border: 1px solid #000000; margin: 50px auto;">
-
-
-
-	<h3 id="connection_functions">connection_functions.py</h3>
-
-	<ul>
-		<li><h4>Function: <code>get_datapoint(i)</code></h4>
-			<p><strong>Description:</strong> Fetches a single data point from the synthetic data stream based on the provided index.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>i</kbd> (<em>int</em>): The index of the data point to retrieve.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>A dictionary containing details like <kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, <kbd>operation</kbd>, and statistical values.</p>
-
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>datapoint = get_datapoint(5)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end)</code></h4>
-			<p><strong>Description:</strong> Retrieves historical data filtered based on machine identity, KPI, and operation over a specified time range.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>machine_name</kbd> (<em>str</em>): Name of the machine.</li>
-				<li><kbd>asset_id</kbd> (<em>str</em>): Identifier of the asset.</li>
-				<li><kbd>kpi</kbd> (<em>str</em>): Key Performance Indicator to filter.</li>
-				<li><kbd>operation</kbd> (<em>str</em>): Operation type to filter (e.g., "working").</li>
-				<li><kbd>timestamp_start</kbd> (<em>str</em>): Start of the time range.</li>
-				<li><kbd>timestamp_end</kbd> (<em>str</em>): End of the time range.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>A Pandas DataFrame containing the filtered historical data.</p>
-		
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>historical_data = get_historical_data(
-	machine_name="metal_cutting",
-	asset_id="ast-yhccl1zjue2t",
-	kpi="time",
-	operation="working",
-	timestamp_start='2024-08-17 00:00:00+00:00',
-	timestamp_end='2024-10-17 00:00:00+00:00'
-)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>send_alert(identity, type, counter=None, probability=None)</code></h4>
-			<p><strong>Description:</strong> Sends an alert notification about anomalies or malfunctions in a machine's data.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>identity</kbd> (<em>dict</em>): Details about the machine, KPI, and operation where the issue occurred.</li>
-				<li><kbd>type</kbd> (<em>str</em>): Type of alert, either <kbd>'Anomaly'</kbd> or <kbd>'Nan'</kbd>.</li>
-				<li><kbd>counter</kbd> (<em>int</em>, optional): Number of consecutive days with NaN values (used for <kbd>'Nan'</kbd> type alerts).</li>
-				<li><kbd>probability</kbd> (<em>float</em>, optional): Probability of an anomaly being correct (used for <kbd>'Anomaly'</kbd> type alerts).</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>None (prints the alert to the console and sends a mail to user).</p>
-
-			<p><strong>Example usage:</strong></p>
-        	<pre>
->>>identity = {"name": "metal_cutting", "asset_id": "ast-yhccl1zjue2t", "kpi": "time", "operation": "working"}
->>>send_alert(identity, type="Anomaly", probability=95)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>store_datapoint(new_datapoint, i)</code></h4>
-			<p><strong>Description:</strong> Updates the synthetic data stream with a new data point and stores it in the database.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>new_datapoint</kbd> (<em>dict</em>): A dictionary containing the new data point to be stored.</li>
-				<li><kbd>i</kbd> (<em>int</em>): Index of the data point in the stream.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>None (updates the <kbd>synthetic_data.json</kbd> file).</p>
-
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>new_datapoint = {
-	'time': '2024-10-18 00:00:00+00:00',
-	'asset_id': 'ast-yhccl1zjue2t',
-	'name': 'metal_cutting',
-	'kpi': 'consumption',
-	'operation': 'working',
-	'sum': 0.175342,
-	'avg': 0.001883,
-	'min': 0.001000,
-	'max': 0.012461,
-	'var': 0.001000,
-	'status': 'Normal'
-}
->>>store_datapoint(new_datapoint, 5)
-
-</pre>
-		</li>
-		
 	<hr style="border: 1px solid #000000; margin: 50px auto;">
 	
 	<h3 id="dataprocessing_functions">dataprocessing_functions.py</h3>
 
 	<ul>
 		<li><h4>Function: <code>get_model_forecast(x)</code></h4>
-			<p><strong>Description:</strong> Loads a trained model for forecasting from a Pickle file based on the provided keys in the dictionary <kbd>x</kbd>, which includes the machine name, asset ID, KPI, and operation. It returns the model along with its parameters and statistics.</p>
+			<p><strong>Description:</strong> Loads the last trained model for forecasting from "store.pkl" based on the identity fields of the passed datapoint <kbd>x</kbd> (name, asset ID, KPI, and operation). It returns the model along with its parameters and statistics.</p>
 
 			<p><strong>Parameters:</strong></p>
 			<ul>
-				<li><kbd>x</kbd> (<em>dict</em>): A dictionary containing the following keys:
+				<li><kbd>x</kbd> (<em>dict</em>): the datapoint from which extract the follwing values for the model retrieval.
 					<ul>
 						<li><kbd>'name'</kbd>: Machine name.</li>
 						<li><kbd>'asset_id'</kbd>: Asset identifier.</li>
@@ -377,25 +395,26 @@
 				</ul>
 			</p>
 
-			<p><strong>Functionality:</strong></p>
-			<p>This function loads a Pickle file that contains pre-trained models for different machines, KPIs, and operations. It then navigates through the dictionary structure using the provided <kbd>x</kbd> dictionary and returns the appropriate model, parameters, and statistics for the given KPI.</p>
-
 			<h4>Example Usage:</h4>
 			<pre>
->>>x = {
-    'name': 'metal_cutting',
-    'asset_id': 'ast-yhccl1zjue2t',
-    'kpi': 'time',
-    'operation': 'working'
-}
+>>>current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 
+'asset_id': 'ast-o8xtn5xa8y87', 
+'name': 'riveting', 
+'kpi': 'good_cycles', 
+'operation': 'working',
+'sum': 24025.0, 
+'avg': 2280.0, 
+'min': 330.0, 
+'max': 1224.0, 
+'var': nan}  
 
->>>models = get_model_forecast(x)
+>>>models = get_model_forecast(current_datapoint)
 
 </pre>
 		</li>
 
 		<li><h4>Function: <code>update_model_forecast(x, model)</code></h4>
-			<p><strong>Description:</strong> Updates or stores new forecasting models, parameters, and statistics in a Pickle file. If the structure for the given keys does not exist, it initializes it before storing the new data.</p>
+			<p><strong>Description:</strong> Overwrite the model present in 'store.pkl' with the new forecasting models. </p>
 
 			<p><strong>Parameters:</strong></p>
 				<ul>
@@ -419,32 +438,34 @@
 				<p><strong>Returns:</strong></p>
 				<p>None. The function updates or creates a Pickle file with the new models, parameters, and statistics for the specified machine and KPI.</p>
 
-				<p><strong>Functionality:</strong></p>
-				<p>This function either updates an existing model or adds a new one to the Pickle file. It checks if the structure exists for the given machine, asset, KPI, and operation. If it doesn't, the function initializes the required structure before saving the model data.</p>
 
 				<h4>Example Usage:</h4>
 				<pre>
->>>x = {
-    'name': 'metal_cutting',
-    'asset_id': 'ast-yhccl1zjue2t',
-    'kpi': 'time',
-    'operation': 'working'
-}
+>>>current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 
+'asset_id': 'ast-o8xtn5xa8y87', 
+'name': 'riveting', 
+'kpi': 'good_cycles', 
+'operation': 'working',
+'sum': 24025.0, 
+'avg': 2280.0, 
+'min': 330.0, 
+'max': 1224.0, 
+'var': nan}  
 
->>>model_data = {
+>>>new_model = {
 	'sum': [keras_model, best_params, stats],
 	'avg': [keras_model, best_params, stats],
     'min': [keras_model, best_params, stats],
     'max': [keras_model, best_params, stats]
 }
 
->>>update_model_forecast(x, model_data)
+>>>update_model_forecast(current_datapoint, new_model)
 </pre>
 		</li>
 		<li>
 			<h4>Function: <code>cleaning_pipeline(x)</code></h4>
 
-				<p><strong>Description:</strong>This function integrates several data cleaning steps for a given data point. It validates the format of the data, checks for missing values, enforces consistency in statistical features (<code>min</code>, <code>avg</code>, <code>max</code>, <code>sum</code>), imputes missing values, and updates the cleaned data point back into the system. If the data point is irreparably corrupted, the function raises an alert.</p>
+				<p><strong>Description:</strong>This function enwrappes the first two main stages of the cleaning process: data validation and imputation. Additionally it check also if a problem has been reported during these stages and if the number of consecutive signalling excess a arbitrarily set threshold ('faulty_aq_tol') then it notifies the alert.</p>
 				
 				<p><strong>Parameters:</strong></p>
 					<ul>
@@ -458,32 +479,30 @@
 				<ol>
 					<li>Validates the data point to ensure the required fields are present and in the correct format.</li>
 					<li>Checks the consistency of statistical values (<code>min <= avg <= max <= sum</code>).</li>
-					<li>Imputes missing values using methods like Exponential Smoothing or Last Value Carry Forward (LVCF) if needed.</li>
+					<li>Imputes missing values using methods like Exponential Smoothing or Last Value Carry Forward (LVCF) if needed (i.e., if the imputed value is not valid according to the consistency rules and range constraints).</li>
 					<li>Updates internal counters to track faulty acquisitions.</li>
 					<li>Triggers an alert if the number of consecutive faulty acquisitions exceeds a defined threshold (<code>faulty_aq_tol</code>).</li>
 				</ol>
 				<p><strong>Example usage:</strong></p>
 				<pre>
 					
->>>data_point = {
-    'time': datetime.now(),
-    'asset_id': 'ast-yhccl1zjue2t',
-    'name': 'metal_cutting',
-    'kpi': 'consumption',
-    'operation': 'working',
-    'sum': 0.175342,
-    'avg': 0.001883,
-    'min': 0.001000,
-    'max': 0.012461,
-    'var': 0.001000
-}
+>>>current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 
+'asset_id': 'ast-o8xtn5xa8y87', 
+'name': 'riveting', 
+'kpi': 'good_cycles', 
+'operation': 'working',
+'sum': 24025.0, 
+'avg': 2280.0, 
+'min': 330.0, 
+'max': 1224.0, 
+'var': nan}  
 
->>>cleaned_data = cleaning_pipeline(data_point)
+>>>cleaned_data = cleaning_pipeline(current_datapoint)
 </pre>
 
 		</li>
 		<li><h4>Function: <code>ADWIN_drift(x)</code></h4>
-			<p><strong>Description:</strong> This function detects drift points in the time series data of a specified feature for a given machine and KPI. It uses the ADWIN algorithm to check for drift over a specified window and returns whether a drift was detected.</p>
+			<p><strong>Description:</strong> This function uses the ADWIN drift detector to identify drift points in the multivariate time series data for a given machine and KPI (i.e., the most recent values of the timeseries stored in 'store.pkl').</p>
 				
 			<p><strong>Parameters:</strong></p>
 			<ul>
@@ -493,21 +512,12 @@
 			<p><strong>Returns:</strong></p>
 			<p>If drift is detected, it returns <kbd>True</kbd> and the drift points; otherwise, it returns <kbd>False</kbd>.</p>
 			
-			<p><strong>Functionality:</strong></p>
-				<p>This function utilizes the ADWIN (Adaptive Windowing) drift detection algorithm to check for statistical drifts in the time series data. The algorithm analyzes the time series by dividing it into two parts and detects if there’s a significant change between them. The function loops over the feature data and applies the ADWIN algorithm to detect drifts at various points in the series.
-					The steps involved are the following:
-				</p>
-				<ol>
-					<li>For each feature in the data, the function splits the time series into two parts: <kbd>batch1</kbd> (all values except the last) and <kbd>batch2</kbd> (all values except the first).</li>
-					<li>The ADWIN algorithm is applied to both batches, and if a drift is detected at any point in <kbd>batch1</kbd> or <kbd>batch2</kbd>, a flag is set.</li>
-					<li>If a drift is detected in <kbd>batch2</kbd> but not in <kbd>batch1</kbd>, it returns <kbd>True</kbd>, indicating a drift was detected. If no drift is detected, it returns <kbd>False</kbd>.</li>
-				</ol>
 			
 			<p><strong>Example usage:</strong></p>
 				<pre>
-# Sample input for ADWIN_drift function
->>>x = get_datapoint(5)
->>>drift_detected = ADWIN_drift(x)
+
+>>>current_datapoint = get_datapoint(5)
+>>>drift_flag = ADWIN_drift(current_datapoint)
 </pre>
 		</li>
 
@@ -515,33 +525,19 @@
 	
 		<li>
 			<h4>Function: <code>ad_train(historical_data)</code></h4>
-				<p><strong>Description:</strong> This function trains an anomaly detection model using the Isolation Forest algorithm. It processes the provided historical data, trains the model with different contamination rates, and returns the trained model.</p>
+				<p><strong>Description:</strong> This function trains an anomaly detection model using the Isolation Forest algorithm. It processes the provided historical data, trains the model with different contamination rates, and it chooses the best according to the silhouette coefficient.</p>
 				
 				<p><strong>Parameters:</strong></p>
 				<ul>
-					<li><kbd>historical_data</kbd> (<em>DataFrame</em>): Historical data that will be used to train the model. The data should contain features like <kbd>sum</kbd>, <kbd>avg</kbd>, <kbd>min</kbd>, <kbd>max</kbd>, and <kbd>var</kbd>.</li>
+					<li><kbd>historical_data</kbd> (<em>DataFrame</em>): Historical data that will be used to train the model. </li>
 				</ul>
 
 				<p><strong>Returns:</strong></p>
 				<p>The trained Isolation Forest model.</p>
 
-				<p><strong>Functionality:</strong></p>
-				<p>This function trains an anomaly detection model using the Isolation Forest algorithm. It iterates through several contamination values and selects the best one based on the silhouette score, which measures the separation between clusters. The model is then trained using the optimal contamination value.
-					The steps involved are the following:
-				</p>
-				<ol>
-					<li>Load the historical data and preprocess it by dropping columns with all NaN values and filling missing values with 0.</li>
-					<li>For each contamination level, train an Isolation Forest model and compute the silhouette score.</li>
-					<li>Select the optimal contamination level based on the highest silhouette score.</li>
-					<li>Train the final Isolation Forest model with the optimal contamination level and return it.</li>
-				</ol>
-				
 				<p><strong>Example usage:</strong></p>
         		<pre>
->>>historical_data = {
-    'time': ['2024-10-17', '2024-10-18', '2024-10-19'],
-    'sum': [0.175342, 0.027339, 0.000000]
-}
+
 >>>model = ad_train(historical_data)
 </pre>
 		</li>
@@ -551,8 +547,8 @@
 
 		<p><strong>Parameters:</strong></p>
 		<ul>
-			<li><kbd>x</kbd> (<em>dict</em>): A dictionary representing a single data point with keys like <kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, and <kbd>operation</kbd>.</li>
-			<li><kbd>model</kbd> (<em>Isolation Forest model</em>): The trained model returned by <kbd>ad_train</kbd>.</li>
+			<li><kbd>x</kbd> (<em>dict</em>): the current datapoint that needs to be classified.</li>
+			<li><kbd>model</kbd> (<em>Isolation Forest model</em>): The trained model previosly stored into 'store.pkl'.</li>
 		</ul>
 
 		<p><strong>Returns:</strong></p>
@@ -563,24 +559,13 @@
 			</ul>
 		</p>
 
-		<p><strong>Functionality:</strong></p>
-		<p>This function takes a single data point and applies the trained Isolation Forest model to classify it as an anomaly or normal. It also calculates the anomaly score and converts it into a probability score.
-			The steps involved are the following:
-		</p>
-		<ol>
-			<li>Convert the input data point into a pandas DataFrame and ensure that missing values are filled with 0.</li>
-			<li>Use the model to predict whether the data point is an anomaly.</li>
-			<li>Calculate the anomaly score using the model's decision function and convert it into a probability.</li>
-			<li>Return the status ('Anomaly' or 'Normal') along with the anomaly probability.</li>
-		</ol>
-
 		<p><strong>Example usage:</strong></p>
 		<pre>
 
 >>>x = {
 	'time': '2024-10-18 00:00:00+00:00',
 	'asset_id': 'ast-yhccl1zjue2t',
-	'name': 'metal_cutting',
+	'name': 'Large Metal Cutting Machine',
 	'kpi': 'consumption',
 	'operation': 'working',
 	'sum': 0.175342,
@@ -590,7 +575,10 @@
 	'var': 0.001000
 }
 
->>>status, anomaly_prob = ad_predict(x, model)
+>>> current_datapoint = get_datapoint(1)
+>>> model = get_model_ad(current_datapoint)
+>>> status, anomaly_probability = ad_predict(current_datapoint, model)
+
 </pre>
 		</li>
 
@@ -613,16 +601,6 @@
 
 			<p><strong>Returns:</strong></p>
 			<p>A <em>DataFrame</em> with the transformed features based on the specified operations (e.g., stationary, detrended, deseasonalized, etc.) and the original <kbd>time</kbd> and feature columns.</p>
-
-			<p><strong>Functionality:</strong></p>
-			<p>This function performs several operations on the time series data to prepare it for machine learning models. It processes each feature (such as <kbd>sum</kbd>, <kbd>avg</kbd>, <kbd>min</kbd>, and <kbd>max</kbd>) based on the flags provided in <kbd>kwargs</kbd>. The operations include:</p>
-			<ol>
-				<li>Checking if the data is stationary using an Augmented Dickey-Fuller test.</li>
-				<li>Removing seasonality using decomposition methods or differencing.</li>
-				<li>Detrending the data by removing the trend component.</li>
-				<li>Extracting residuals if requested.</li>
-				<li>Applying standardization (z-score scaling) to the features.</li>
-			</ol>
 
 			<p><strong>Example usage:</strong></p>
 			<pre>
@@ -699,17 +677,6 @@
 				<li><kbd>stats</kbd>: An array containing the mean and standard deviation of the input (<kbd>x_mean, x_std</kbd>) and output (<kbd>y_mean, y_std</kbd>) for normalization.</li>
 			</ul>
 
-			<p><strong>Functionality:</strong></p>
-			<p>This function follows these steps:</p>
-			<ol>
-				<li>Performs hyperparameter optimization using Optuna to find the best TDNN configuration.</li>
-				<li>Splits the time series into input (features) and target (labels).</li>
-				<li>Normalizes the training and test data based on the training dataset statistics.</li>
-				<li>Trains the TDNN with the best hyperparameters on the training data.</li>
-				<li>Evaluates the trained model on the test dataset and calculates the Mean Squared Error (MSE).</li>
-				<li>Returns the trained model, best hyperparameters, and normalization statistics.</li>
-			</ol>
-
 			<p><strong>Example usage:</strong></p>
 			<pre>
 >>>data = {
@@ -737,16 +704,6 @@
 
 			<p><strong>Returns:</strong></p>
 			<p>A <em>DataFrame</em> containing two columns: <kbd>'time'</kbd> (forecast timestamps) and the predicted values for the specified feature.</p>
-
-			<p><strong>Functionality:</strong></p>
-			<p>This function forecasts future values by:</p>
-			<ol>
-				<li>Using the last sequence from the input data as the initial sliding window.</li>
-				<li>Normalizing the input window based on the provided statistics.</li>
-				<li>Generating predictions iteratively for the specified forecast period.</li>
-				<li>Denormalizing the predictions to return them in the original scale.</li>
-				<li>Returning the predicted values alongside their corresponding timestamps.</li>
-			</ol>
 
 			<p><strong>Example usage:</strong></p>
 			<pre>
