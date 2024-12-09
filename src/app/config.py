@@ -1,4 +1,5 @@
 import os
+from notification.mail_sender import MailSender
 
 PROJECT_FOLDER = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,3 +26,9 @@ HISTORICAL_DATA_PATH = os.path.join(
 STORE_PKL = os.path.join(PROJECT_FOLDER, os.path.join("data", "store.pkl"))
 
 FORECASTING_MODELS_PKL = os.path.join(PROJECT_FOLDER, os.path.join("data", "forecasting_models.pkl"))
+
+sender_email = "your_email@libero.it"
+sender_password = "your_password"
+recipient_email = "recipient_email@example.com"
+
+MAILER =MailSender(mail=sender_email, password=sender_password, recipient=recipient_email)

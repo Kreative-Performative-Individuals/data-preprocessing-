@@ -7,7 +7,6 @@ from notification.mail_sender import MailSender
 
 def get_datapoint(i):
     
-
     with open(config.ORIGINAL_ADAPTED_DATA_PATH, "r") as file:
         stream=json.load(file)
 
@@ -93,9 +92,8 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
     else:
         object='Malfunctioning alert' 
         alert = f"It has been {counter} days that machine: '{identity['name']}' - asset: '{identity['asset_id']}' returns NaN values in kpi: '{identity['kpi']}' - operation: '{identity['operation']}'. Possible malfunctioning either in the acquisition system or in the machine!"
-    sender = MailSender('mcaponio28@libero.it', 'p@sswordLiber0', 'mcaponio28@gmail.com')
 
-    sender.send_mail(object, alert)
+    config.MAILER.send_mail(object, alert)
 
 
 

@@ -12,7 +12,7 @@ from statsmodels.tsa.stattools import acf
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import silhouette_score
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras.optimizers import Adam
 from keras.models import model_from_json
 from river import drift
@@ -107,32 +107,6 @@ ML_algorithms_config = {
 
 
 def get_batch(x, f):
-    """
-    Retrieve a specific batch of data for the given feature from the store.
-
-    This function loads the Pickle file 'store.pkl' and search for the batch of data in the saved structure according
-    to the identity of the kpi (extracted from x) and to the specific feature (f in ['sum', 'avg', 'min', 'max', 'var']) 
-    it needs to be handled.
-
-    Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
-      Expected keys include:
-        - 'name' (str): The type of the machine.
-        - 'asset_id' (str): The asset identifier.
-        - 'kpi' (str): The key performance indicator.
-        - 'operation' (str): The operation type.
-    - f (str): The feature for which the batch is requested. This should match an entry in the `features` list (['sum', 'avg', 'min', 'max', 'var'])
-
-    Returns:
-    - list: A list representing the batch data for the specified feature.
-
-    Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}  
-    >>> feature = 'min'
-    >>> get_batch(current_datapoint, feature)
-    [0.5, 0.6, 0.7, 0.8]
-    """    
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     # This function will return batch
@@ -142,32 +116,6 @@ def get_batch(x, f):
 
 
 def update_batch(x, f): 
-    """
-    Update the batch data for a specific feature in the store.
-    
-    This function loads the existing data from the Pickle file 'store.pkl', updates the specified batch by 
-    appending a new value, and ensures the batch does not exceed the predefined length.
-    If the batch length exceeds the limit, the oldest value is removed. Finally, the updated batch is 
-    stored back into the Pickle file.
-
-    Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed and the values to be appended. 
-      Expected keys include:
-        - 'name' (str): The type of the machine.
-        - 'asset_id' (str): The asset identifier.
-        - 'kpi' (str): The key performance indicator.
-        - 'operation' (str): The operation type.
-    - f (str): The feature for which the batch is being updated. This should match an entry in the `features` list (['sum', 'avg', 'min', 'max', 'var']).
-
-    Returns:
-    - None: The function modifies the Pickle file in place.
-
-    Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-                             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
-    >>> feature = 'sum'
-    >>> update_batch(x, feature)
-    """
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     dq = deque(
@@ -187,34 +135,6 @@ def update_batch(x, f):
 
 
 def update_counter(x, reset=False):
-
-    """
-    Update the counter for data that report problems in the acquisition.
-    
-    This function loads the existing data from the Pickle file and either increments the counter 
-    or resets it to zero based on the `reset` flag. The counter is associated to a specific KPI of a specific machine.
-
-    Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
-      Expected keys include:
-        - 'name' (str): The type of the machine.
-        - 'asset_id' (str): The asset identifier.
-        - 'kpi' (str): The key performance indicator.
-        - 'operation' (str): The operation type.
-    - reset (bool, optional): If `True`, the counter is reset to 0. If `False`, the counter is incremented. 
-      Default is `False`.
-
-    Returns:
-    - None: The function modifies the Pickle file in place.
-
-    Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-    >>>                      'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
-    >>> # counter = 1
-    >>> update_counter(current_datapoint, reset=False)  # counter becomes 2
-    >>> update_counter(current_datapoint, reset=True)   # counter becomes 0
-    """
-        
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     if not reset:
@@ -227,69 +147,18 @@ def update_counter(x, reset=False):
 
 
 def get_counter(x):
-    """
-    Retrieve the current counter value for a specific KPI and machine from the Pickle file.
-    
-    This function loads the data from the Pickle file 'store.pkl' and returns the current counter 
-    associated with a specific combination of 'name', 'asset_id', 'kpi', and 'operation'.
-
-    Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
-      Expected keys include:
-        - 'name' (str): The type of the machine.
-        - 'asset_id' (str): The asset identifier.
-        - 'kpi' (str): The key performance indicator.
-        - 'operation' (str): The operation type.
-
-    Returns:
-    - int: The current counter value for the specified operation.
-
-    Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-                             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
-    >>> get_counter(current_datapoint)
-    2  # Returns the current counter value for the specified operation
-    """
-    
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     return info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][1]
 
 
-def get_model_ad(x):  # id should contain the identity of the kpi about whihc we are storing the model
-    # [it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
+def get_model_ad(x):
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     return info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][2]
 
 
 def update_model_ad(x, model):
-    """
-    Update the model with the last trained one in the Pickle file.
-    
-    This function loads the existing data from the Pickle file and updates the model for the specific
-    KPI and machine (extracted from the passed datapoint).
-    
-    Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
-      Expected keys include:
-        - 'name' (str): The type of the machine.
-        - 'asset_id' (str): The asset identifier.
-        - 'kpi' (str): The key performance indicator.
-        - 'operation' (str): The operation type.
-    - model (obj): An object containing the Isolation Forest model just trained.
-
-    Returns:
-    - None: The function modifies the Pickle file in place.
-
-   Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-                             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
-    >>> model = IsolationForest(n_estimators=200, contamination=0.01)
-    >>> model.fit_predict(train_set)
-    >>> update_model_ad(x, model)
-    """
-
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][2] = model
@@ -298,20 +167,10 @@ def update_model_ad(x, model):
         pickle.dump(info, file)
 
 
-"""def get_model_forecast(x): #id should contain the identity of the kpi about whihc we are storing the model                        #[it is extracted from the columns of historical data, so we expect it to be: asset_id, name, kpi, operation]
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
-    return info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]"""
-
-
 def get_model_forecast(x):
-    # Load the Pickle file
-    with open(config.FORECASTING_MODELS_PKL, "rb") as f:
-        all_models_data = pickle.load(f)
-
-    # Navigate to the specific model based on the x keys
-    model_info = all_models_data[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]]
-
+    with open(config.STORE_PKL, "rb") as file:            
+            info = pickle.load(file)
+    model_info=info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]
     models_for_subfeatures = {}
     for sub_feature, data in model_info.items():
         keras_model = model_from_json(data["model_architecture"])
@@ -321,77 +180,46 @@ def get_model_forecast(x):
             data["params"],
             data["stats"],
         ]
-
     return models_for_subfeatures
 
 
-"""def update_model_forecast(x, model):
-    with open(store_path, "r") as json_file:
-            info = json.load(json_file)
-    info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]=model
-    
-    with open(store_path, "w") as json_file:
-        json.dump(info, json_file, indent=1) """
 
-
-def update_model_forecast(x, model):
+def update_model_forecast(x, models):
     """
     Update or store models, parameters, and stats in a Pickle file.
 
     Arguments:
     - x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
-    - model: A dictionary where the keys are sub-features ('min', 'max', 'sum', 'avg') and
+    - models: A dictionary where the keys are sub-features ('min', 'max', 'sum', 'avg') and
              the values are lists containing [keras_model, best_params, stats].
     - store_path: The path where the Pickle file is stored.
 
     This function will either add new models or update existing ones in the Pickle file.
     """
-
-    # Load the existing data from the Pickle file if it exists
-    if os.path.exists(config.FORECASTING_MODELS_PKL):
-        with open(config.FORECASTING_MODELS_PKL, "rb") as f:
-            all_models_data = pickle.load(f)
-    else:
-        all_models_data = {}
-
-    # Navigate to the specific location in the dictionary based on 'x' keys
-    name = x["name"]
-    asset_id = x["asset_id"]
-    kpi = x["kpi"]
-    operation = x["operation"]
-
-    # Check if the structure exists, if not, initialize it
-    if name not in all_models_data:
-        all_models_data[name] = {}
-
-    if asset_id not in all_models_data[name]:
-        all_models_data[name][asset_id] = {}
-
-    if kpi not in all_models_data[name][asset_id]:
-        all_models_data[name][asset_id][kpi] = {}
-
-    if operation not in all_models_data[name][asset_id][kpi]:
-        all_models_data[name][asset_id][kpi][operation] = {}
-
+    with open(config.STORE_PKL, "rb") as file:
+            info = pickle.load(file)
+    
     # Now, for each sub-feature, add or update the model, params, and stats
-    for sub_feature, model_info in model.items():
+    complete_model={}
+    for feature, model_info in models.items():
         keras_model, best_params, stats = model_info
 
         # Store model data in the dictionary
-        all_models_data[name][asset_id][kpi][operation][sub_feature] = {
+        complete_model[feature] = {
             "model_architecture": keras_model.to_json(),  # Store model architecture
             "model_weights": keras_model.get_weights(),  # Store model weights
             "params": best_params,  # Store best parameters
             "stats": stats,  # Store stats
         }
+    
+    info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]=complete_model
 
     # Save the updated data back to the Pickle file
-    with open(config.FORECASTING_MODELS_PKL, "wb") as f:
-        pickle.dump(all_models_data, f)
+    with open(config.STORE_PKL, "wb") as file:
+        pickle.dump(info, file)
 
-    print(f"Models updated successfully in {config.FORECASTING_MODELS_PKL}")
-
-
+    print(f"Models updated successfully in {config.STORE_PKL}")
+    
 
 '''
 ________________________________________________________________________________________________________
@@ -402,65 +230,9 @@ ________________________________________________________________________________
 In this piece of code there are functions related to the validation, imputation processes and related sub-operations.'''
 
 
-# ______________________________________________________________________________________________
-# This function takes in input the data point that we are receiving and checks the reliability
-# of its features in terms of logic consistency (min<=avg<=max<=sum). If one of these conditions is
-# not satisfied, then it means that the involved features are not working as expected. In this function
-# we set the corrisponding indicator as False (check not passed), and in the main code (validate_format) the
-# corrisponding value will be put at nan since its information is not reliable.
-
 
 def check_f_consistency(x):
-    """
-    Check the consistency of statistical values (min, avg, max, sum) for a given data point.
-    
-    This function checks whether the provided statistical values (`min`, `avg`, `max`, `sum`) 
-    for a data point satisfy a basic consistency rule: `min`<= `avg`<= `max`<= `sum`).
-    - If any of the relation is violated, the respective indicator of the involving features is set to `False`.
-    - Missing values (NaN) for any of the statistics will also flag the respective indicator as `False`.
 
-    Arguments:
-    - x (dict): The current datapoint being processed.
-        Expected keys include:
-        - 'min' (float or NaN): The minimum value.
-        - 'avg' (float or NaN): The average value.
-        - 'max' (float or NaN): The maximum value.
-        - 'sum' (float or NaN): The sum value.
-
-    Returns:
-    - list: A list of boolean values indicating if the corrisponding feature value is behaving as such:
-        - index 0: Consistency for `sum`
-        - index 1: Consistency for `avg`
-        - index 2: Consistency for `min`
-        - index 3: Consistency for `max`
-      `True` indicates consistency, `False` indicates a violation of the consistency rule regarding the corrisponding feature.
-
-    Example:
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-                             'min': 100, 'avg': 150, 'max': 200, 'sum': 500}
-    >>> check_f_consistency(x)
-    [True, True, True, True]  # All values are consistent
-    
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
-                             'min': 200, 'avg': 100, 'max': 400, 'sum': 500}
-    >>> check_f_consistency(x)
-    [False, False, True, True]  # Values are inconsistent
-    
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
-                             'min': NaN, 'avg': 100, 'max': 50, 'sum': 500}
-    >>> check_f_consistency(x)
-    [False, False, False, True]  # Values are inconsistent
-    
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
-                             'min': NaN, 'avg': 100, 'max': 50, 'sum': 10}
-    >>> check_f_consistency(x)
-    [False, False, False, False]  # Values are inconsistent
-    
-    >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
-                             'min': NaN, 'avg': NaN, 'max': NaN, 'sum': 10}
-    >>> check_f_consistency(x)
-    [False, False, False, True]
-    """
     indicator=[True, True, True, True]
     if not pd.isna(x['min']) and not pd.isna(x['avg']):
         if x['min'] > x['avg']:
@@ -498,16 +270,6 @@ def check_f_consistency(x):
 
 
 def validate(x):
-    """Takes in input the data point that we are receiving and checks its reliability in
-    terms of format. In general, if the data point is too severly compromised (one of the identity fields is
-    nan or missing, all features are nan), then it is discarded (return None).
-
-    Args:
-        x (_type_): the data point
-
-    Returns:
-        _type_: _description_
-    """
 
     for f in fields:
         x.setdefault(
@@ -695,14 +457,14 @@ def cleaning_pipeline(x):
 #     'var': 4}
 # it should alert that there is a problem in the acquisition but the point is still cleaned.
 
-"""'
+"""
 ________________________________________________________________________________________________________
+
 FUNCTIONS FOR DRIFT DETECTION
 ________________________________________________________________________________________________________
-"""
-
-""" In this code we stored the functions that were used in the drift detection section of the
-preprocessing pipeline, including a brief description of their inputs, outputs and functioning"""
+ 
+In this piece of code there are the functions that are used in the drift detection section of the
+preprocessing pipeline."""
 
 # ______________________________________________________________________________________________
 # This function takes in input the time serie specific for a feature of a determined machine and
@@ -1340,14 +1102,13 @@ def create_TDNN(hidden_units, lr):
     # OUTPUT:
     # - model: the model
     model = Sequential()
-    model.add(Dense(hidden_units, activation="relu"))
-    # model.add(Dropout(0.2))
-    # model.batchnormalization ??
-    model.add(Dense(hidden_units, activation="relu"))
-    # model.add(Dropout(0.2))
-    model.add(Dense(hidden_units, activation="relu"))
+    model.add(Dense(hidden_units, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(hidden_units, activation='relu'))
+    #model.add(Dropout(0.2))
+    #model.add(Dense(hidden_units, activation='relu'))
     model.add(Dense(1))
-    model.compile(loss="mean_squared_error", optimizer=Adam(lr))
+    model.compile(loss='mean_squared_error', optimizer=Adam(lr))
     return model
 
 
