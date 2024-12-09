@@ -27,8 +27,8 @@ STORE_PKL = os.path.join(PROJECT_FOLDER, os.path.join("data", "store.pkl"))
 
 FORECASTING_MODELS_PKL = os.path.join(PROJECT_FOLDER, os.path.join("data", "forecasting_models.pkl"))
 
-sender_email = "your_email@libero.it"
-sender_password = "your_password"
-recipient_email = "recipient_email@example.com"
+sender_email = "smartdashboard.teamb@libero.it"
+sender_password = "SmartApp24-25"
+recipient_email = "example@email.com"
 
 MAILER =MailSender(mail=sender_email, password=sender_password, recipient=recipient_email)

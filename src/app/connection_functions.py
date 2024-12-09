@@ -6,13 +6,12 @@ from notification.mail_sender import MailSender
 
 
 def get_datapoint(i):
-    
     with open(config.ORIGINAL_ADAPTED_DATA_PATH, "r") as file:
-        stream=json.load(file)
+        stream = json.load(file)
 
-    stream=pd.DataFrame(stream)[38400:]
+    stream = pd.DataFrame(stream)[38400:]
     datapoint = stream.iloc[i].to_dict()
-        
+
     return datapoint
 
 
@@ -87,7 +86,7 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
                                         # have been detected, type is 'Anomaly' or 'Nan', counter (is the number of consecutive days in
                                         # which we have detected nan) is None if type = 'Anomaly'
     if type == 'Anomaly':
-        object='KPI - Anomaly alert'
+        object='Anomaly alert'
         alert = f"Alert anomaly in machine: '{identity['name']}' - asset: '{identity['asset_id']}' - kpi: '{identity['kpi']}' - operation: '{identity['operation']}'! The probability that this anomaly is correct is {probability}%."
     else:
         object='Malfunctioning alert' 

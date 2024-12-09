@@ -108,23 +108,46 @@
 			This is the documentation for the Python interface implemented by Topic 3 to allow data processing of KPIs data. 
 			The code and the ML pipelines can be found in the GitHub repository at this <a href="https://github.com/Kreative-Performative-Individuals/data-preprocessing-/tree/feat/kafka-integration">link</a>.
 		</p>
-		<p>
-			The main files for the application can be found in data-preprocessing-/src/app:
-			<ul><li><kbd>streaming_pipeline.py</kbd>: the pipeline that is deputed to the continuous reception, cleaning the received data point in real time and checking if any concept drift has occurred or if the datapoint itself is an anomaly.</li>
-				<li><kbd>on_request_pipeline.py</kbd>: the pipeline that starts whenever a request for forecasting or feature engineering is received and ends when the result is delivered to the requester.</li>
-			</u> 
-		</p>
-		<p>
-			These files, in turn, will call all the others to implement specific features of the corrisponding pipelines.
-			The principal files present in our repository are the following:
-		</p>
+		<p>The main files for the application can be found in <code>data-preprocessing-/src/app</code>:</p>
 		<ul>
-
-			<li><kbd>connection_functions.py</kbd>: Contains all the necessary connections to other engines of the application that are required to efficiently run the pipelines. Here you can find <kbd>get_datapoint()</kbd> (currently a mockup of the streaming), <kbd>get_historical_data()</kbd>, <kbd>send_alert()</kbd>, and <kbd>store_datapoint()</kbd>.</li>
-			<li><kbd>dataprocessing_functions.py</kbd>: Contains the main functions and classes of the data processing block, such as <kbd>data_cleaning()</kbd>, <kbd>ADWIN_drift()</kbd>, <kbd>AnomalyDetector()</kbd>, <kbd>feature_engineering_pipeline()</kbd>, <kbd>tdnn_forecasting_prediction()</kbd>, and all their subfunctions.</li>
-			<li><kbd>smart_app_data.pkl</kbd>: The dataset that was provided to us.</li>
-			<li><kbd>synthetic_data.json</kbd> and <kbd>store.json</kbd>: Mockup data used to simulate the streaming data and the historical data.</li>
-			<li>Other documents: Related to the API connections, explainability, and security controls.</li>
+			<li>
+				<code>config.py</code>: it will set up all the file positions that will be used by all the other functions. 
+				Additionally, it will initialize the <code>MailSender</code> class 
+				(present in <code>data-preprocessing-\data-preprocessing-\src\app\notification\mail_sender.py</code>) 
+				with the right email addresses for the alert notification.
+			</li>
+			<li>
+				<code>streaming_pipeline.py</code>: the pipeline that is deputed to the continuous reception, 
+				cleaning the received data point in real time and checking if any concept drift has occurred 
+				or if the datapoint itself is an anomaly.
+			</li>
+			<li>
+				<code>on_request_pipeline.py</code>: the pipeline that starts whenever a request for forecasting 
+				or feature engineering is received and ends when the result is delivered to the requester.
+			</li>
+		</ul>
+		<p>These last 2 files, in turn, will call all the others to implement specific features of the corresponding pipelines. 
+		They are organized into two files:</p>
+		<ul>
+			<li>
+				<code>dataprocessing_functions.py</code>: it contains the main functions and classes of the data processing pipeline.
+			</li>
+			<li>
+				<code>connection_functions.py</code>: it contains all the necessary connections to other part of the application.
+			</li>
+		</ul>
+		<p>In addition:</p>
+		<ul>
+			<li>
+				In the folder <code>data</code>, JSON files (such as <code>cleaned_predicted_dataset.json</code> and 
+				<code>historical_dataset.json</code> that are used as a mockup for historical data, 
+				<code>original_adapted_dataset.json</code> exploited to simulate the stream) can be found that are 
+				useful to mock connections and test the pipeline by its own.
+			</li>
+			<li>
+				In the folder <code>notification</code> there is the file <code>mail_sender.py</code> containing the 
+				class responsible for the physical sending of the alert email.
+			</li>
 		</ul>
 
         <h2 id="methods-and-documentation">Methods and Documentation</h2>
