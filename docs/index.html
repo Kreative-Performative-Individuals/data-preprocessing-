@@ -150,14 +150,130 @@
 			</li>
 		</ul>
 
+
+
+
+
         <h2 id="methods-and-documentation">Methods and Documentation</h2>
+
+
+
+
+		<h3 id="connection_functions">connection_functions.py</h3>
+
+		<ul>
+			<li><h4>Function: <code>get_datapoint(i)</code></h4>
+				<p><strong>Description:</strong> fetches a single data from the stream dataset (original_adapted_dataset.json) based on the provided index.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>i</kbd> (<em>int</em>): The index of the data point to retrieve.</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>A dictionary containing the single datapoint as a dictionary with keys (<kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, <kbd>operation</kbd>, and feature values).</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>datapoint = get_datapoint(5)
+	{'time': '2024-09-17 00:00:00+00:00',
+	 'asset_id': 'ast-sfio4727eub0',
+	 'name': 'assembly',
+	 'kpi': 'consumption',
+	 'operation': 'idle',
+	 'sum': 0.0,
+	 'avg': 0.0,
+	 'min': 0.0,
+	 'max': 0.0,
+	 'var': nan,
+	 'status': nan}
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end)</code></h4>
+				<p><strong>Description:</strong> Retrieves historical data filtered based on machine identity, KPI, and operation over a specified time range.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>machine_name</kbd> (<em>str</em>): Name of the machine.</li>
+					<li><kbd>asset_id</kbd> (<em>str</em>): Identifier of the asset.</li>
+					<li><kbd>kpi</kbd> (<em>str</em>): Key Performance Indicator to filter.</li>
+					<li><kbd>operation</kbd> (<em>str</em>): Operation type to filter (e.g., "working").</li>
+					<li><kbd>timestamp_start</kbd> (<em>str</em>): Start of the time range. Default is set at a predefined number of days before the 'timestamp_end' (e.g., 100).</li>
+					<li><kbd>timestamp_end</kbd> (<em>str</em>): End of the time range. Default is set to the timestamp of the last datapoint in the historical data. </li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>A Pandas DataFrame containing the filtered historical data.</p>
+			
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>historical_data = get_historical_data(
+		machine_name="Large Cutting Machine 1",
+		asset_id="ast-yhccl1zjue2t",
+		kpi="time",
+		operation="working",
+		timestamp_start='2024-08-17 00:00:00+00:00',
+		timestamp_end='2024-10-17 00:00:00+00:00'
+	)
+	
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>send_alert(identity, type, counter=None, probability=None)</code></h4>
+				<p><strong>Description:</strong> Sends an alert notification via mail whenever an anomaly or acquisition malfunctioning has been detected.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>identity</kbd> (<em>dict</em>): Machine name, asset identificator, KPI and operation of the datapoint for which the anomalous behavior has been detected.</li>
+					<li><kbd>type</kbd> (<em>str</em>): Type of alert, either <kbd>'Anomaly'</kbd> or <kbd>'Nan'</kbd>.</li>
+					<li><kbd>counter</kbd> (<em>int</em>, optional): Number of consecutive days in which the acquisition of datapoints for the specific KPI and machine has reported problems (used only for <kbd>'NaN'</kbd> type alerts).</li>
+					<li><kbd>probability</kbd> (<em>float</em>, optional): Probability for an anomaly to be correct (used for <kbd>'Anomaly'</kbd> type alerts).</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>None (it just sends a mail to user).</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>identity = {"name": "Large Metal Cutting Machine", "asset_id": "ast-yhccl1zjue2t", "kpi": "time", "operation": "working"}
+	>>>send_alert(identity, type="Anomaly", probability=95)
+	
+	</pre>
+			</li>
+	
+			<li><h4>Function: <code>store_datapoint(new_datapoint)</code></h4>
+				<p><strong>Description:</strong> Appends the processed datapoint to the already stored historical data.</p>
+				<p><strong>Parameters:</strong></p>
+				<ul>
+					<li><kbd>new_datapoint</kbd> (<em>dict</em>): A dictionary containing the new data point to be stored.</li>
+				</ul>
+				<p><strong>Returns:</strong></p>
+				<p>None</p>
+	
+				<p><strong>Example usage:</strong></p>
+				<pre>
+	>>>new_datapoint = {
+		'time': '2024-10-18 00:00:00+00:00',
+		'asset_id': 'ast-yhccl1zjue2t',
+		'name': 'Large Metal Cutting Machine',
+		'kpi': 'consumption',
+		'operation': 'working',
+		'sum': 0.175342,
+		'avg': 0.001883,
+		'min': 0.001000,
+		'max': 0.012461,
+		'var': 0.001000,
+		'status': 'Normal'
+	}
+	>>>store_datapoint(new_datapoint)
+	
+	</pre>
+			</li>
+
+
+
 
 		<h3 id="on_request_pipeline">on_request_pipeline.py</h3>
 		
 		<ul>
 			<li><h4>Function: <code>get_request(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end, transformation, forecasting)</code></h4>
 				<p>
-					<strong>Description:</strong> Handles requests for historical data transformations or forecasting. Depending on the provided parameters, it either applies feature engineering transformations or performs time-series forecasting using machine learning models.
+					<strong>Description:</strong> Handles requests for historical data transformations or forecasting. Depending on the provided parameters, it either applies feature engineering transformations or performs time-series forecasting using a TDNN (time delay neural network).
 
 				<p><strong>Parameters:</strong></p>
 				<ul>
@@ -205,12 +321,12 @@
 				<p><strong>Example usage:</strong></p>
 				<pre>
 >>> json_forecast = get_request(
-	machine_name="metal_cutting",
+	machine_name="Large Metal Cutting Machine 1",
 	asset_id="ast-yhccl1zjue2t",
 	kpi="time",
 	operation="working",
-	timestap_start='2024-10-17',
-	timestamp_end='2024-10-24',
+	timestap_start="2024-10-17 00:00:00+00:00",
+	timestamp_end="2024-10-17 00:00:00+00:00",
 	transformation=None,
 	forecasting=True
 )
@@ -222,13 +338,13 @@
 		<hr style="border: 1px solid #000000; margin: 50px auto;">
 
 	<h3 id="streaming_pipeline">streaming_pipeline.py</h3>
-	<p>This script implements a real-time processing loop for handling streaming data points. It performs data cleaning, drift detection, anomaly detection, and model retraining when necessary. The processed data is then stored back into the database.</p>
+	<p>This script implements a real-time processing loop for handling streaming data points. It performs data cleaning, drift detection, model retraining upon positive result and anomaly detection point by point. The processed data is then stored back into the database.</p>
 
 		
 	<p><strong>Overview</strong></p>
-    <p>The loop operates continuously, fetching new data points from a stream, processing them, and applying machine learning models for anomaly detection and forecasting. The workflow includes:</p>
+    <p>The loop operates to continuously operate the following workflow:</p>
     <ul>
-        <li>Data acquisition: fetches a new data point from the streaming API using the <kbd>get_datapoint</kbd> function. The fetched data point includes fields such as <kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, and statistical features like <kbd>sum</kbd>, <kbd>avg</kbd>, <kbd>min</kbd>, <kbd>max</kbd>, and <kbd>var</kbd>.
+        <li>Data acquisition: fetches a new data point from the real-time stream using the <kbd>get_datapoint</kbd> function. The fetched data point includes identity fields (<kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, and statistical features like <kbd>sum</kbd>, <kbd>avg</kbd>, <kbd>min</kbd>, <kbd>max</kbd>, and <kbd>var</kbd>.
 		</li>
         <li>Data cleaning: the fetched data point is cleaned using the <kbd>cleaning_pipeline</kbd> function to ensure consistency and validity. Invalid or missing values are imputed or flagged.
 		</li>
@@ -251,102 +367,6 @@
 
 
 
-	<h3 id="connection_functions">connection_functions.py</h3>
-
-	<ul>
-		<li><h4>Function: <code>get_datapoint(i)</code></h4>
-			<p><strong>Description:</strong> Fetches a single data point from the synthetic data stream based on the provided index.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>i</kbd> (<em>int</em>): The index of the data point to retrieve.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>A dictionary containing details like <kbd>time</kbd>, <kbd>asset_id</kbd>, <kbd>name</kbd>, <kbd>kpi</kbd>, <kbd>operation</kbd>, and statistical values.</p>
-
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>datapoint = get_datapoint(5)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end)</code></h4>
-			<p><strong>Description:</strong> Retrieves historical data filtered based on machine identity, KPI, and operation over a specified time range.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>machine_name</kbd> (<em>str</em>): Name of the machine.</li>
-				<li><kbd>asset_id</kbd> (<em>str</em>): Identifier of the asset.</li>
-				<li><kbd>kpi</kbd> (<em>str</em>): Key Performance Indicator to filter.</li>
-				<li><kbd>operation</kbd> (<em>str</em>): Operation type to filter (e.g., "working").</li>
-				<li><kbd>timestamp_start</kbd> (<em>str</em>): Start of the time range.</li>
-				<li><kbd>timestamp_end</kbd> (<em>str</em>): End of the time range.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>A Pandas DataFrame containing the filtered historical data.</p>
-		
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>historical_data = get_historical_data(
-	machine_name="metal_cutting",
-	asset_id="ast-yhccl1zjue2t",
-	kpi="time",
-	operation="working",
-	timestamp_start='2024-08-17 00:00:00+00:00',
-	timestamp_end='2024-10-17 00:00:00+00:00'
-)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>send_alert(identity, type, counter=None, probability=None)</code></h4>
-			<p><strong>Description:</strong> Sends an alert notification about anomalies or malfunctions in a machine's data.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>identity</kbd> (<em>dict</em>): Details about the machine, KPI, and operation where the issue occurred.</li>
-				<li><kbd>type</kbd> (<em>str</em>): Type of alert, either <kbd>'Anomaly'</kbd> or <kbd>'Nan'</kbd>.</li>
-				<li><kbd>counter</kbd> (<em>int</em>, optional): Number of consecutive days with NaN values (used for <kbd>'Nan'</kbd> type alerts).</li>
-				<li><kbd>probability</kbd> (<em>float</em>, optional): Probability of an anomaly being correct (used for <kbd>'Anomaly'</kbd> type alerts).</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>None (prints the alert to the console and sends a mail to user).</p>
-
-			<p><strong>Example usage:</strong></p>
-        	<pre>
->>>identity = {"name": "metal_cutting", "asset_id": "ast-yhccl1zjue2t", "kpi": "time", "operation": "working"}
->>>send_alert(identity, type="Anomaly", probability=95)
-
-</pre>
-		</li>
-
-		<li><h4>Function: <code>store_datapoint(new_datapoint, i)</code></h4>
-			<p><strong>Description:</strong> Updates the synthetic data stream with a new data point and stores it in the database.</p>
-			<p><strong>Parameters:</strong></p>
-			<ul>
-				<li><kbd>new_datapoint</kbd> (<em>dict</em>): A dictionary containing the new data point to be stored.</li>
-				<li><kbd>i</kbd> (<em>int</em>): Index of the data point in the stream.</li>
-			</ul>
-			<p><strong>Returns:</strong></p>
-			<p>None (updates the <kbd>synthetic_data.json</kbd> file).</p>
-
-			<p><strong>Example usage:</strong></p>
-			<pre>
->>>new_datapoint = {
-	'time': '2024-10-18 00:00:00+00:00',
-	'asset_id': 'ast-yhccl1zjue2t',
-	'name': 'metal_cutting',
-	'kpi': 'consumption',
-	'operation': 'working',
-	'sum': 0.175342,
-	'avg': 0.001883,
-	'min': 0.001000,
-	'max': 0.012461,
-	'var': 0.001000,
-	'status': 'Normal'
-}
->>>store_datapoint(new_datapoint, 5)
-
-</pre>
-		</li>
 		
 	<hr style="border: 1px solid #000000; margin: 50px auto;">
 	
