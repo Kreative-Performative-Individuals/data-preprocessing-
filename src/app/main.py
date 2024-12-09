@@ -9,7 +9,7 @@ from src.app.real_time.request import KPIStreamingRequest, KPIValidator
 from src.app.real_time.message import RealTimeKPI
 import os
 from dotenv import load_dotenv
-from src.app.connections_functions import get_next_datapoint
+from src.app.connection_functions import get_next_datapoint
 from src.app.dataprocessing_functions import cleaning_pipeline
 import uvicorn
 import asyncio
@@ -154,7 +154,7 @@ async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
             break
 
         i = (i + 1) % BATCH_SIZE
-        # await asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     print("Exiting KPI streaming loop.")
 

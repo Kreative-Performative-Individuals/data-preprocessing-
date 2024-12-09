@@ -1,5 +1,5 @@
-from dataprocessing_functions import machine, kpi, features, fields, update_model_ad, tdnn_forecasting_training, update_model_forecast
-import config
+from src.app.dataprocessing_functions import machine, kpi, features, fields, update_model_ad, tdnn_forecasting_training, update_model_forecast
+import src.app.config as config
 import pickle
 import json
 import os
