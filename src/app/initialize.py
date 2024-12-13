@@ -85,11 +85,12 @@ for m in list(machine.keys()):
                         optimal_c=cc[np.argmax(s)]
                     model = IsolationForest(n_estimators=200, contamination=optimal_c)
                     explainer = ad_exp_train(train_set)
+                    
                     update_model_ad(section.iloc[0].to_dict(), model)
                     update_model_ad_exp(section.iloc[0].to_dict(), explainer)
+                    
                     predictions = model.fit_predict(train_set)
                     predictions= np.vstack([train_set.index, predictions])
-
                     marker_indices = predictions[0, predictions[1] == -1]  # First row corresponding to -1 in second row
                     plt.figure(figsize=(10, 6)) 
                     for f in train_set.columns:
