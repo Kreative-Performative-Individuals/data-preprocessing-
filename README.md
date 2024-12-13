@@ -1,15 +1,13 @@
 # Data Processing Block
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Kreative-Performative-Individuals/KPI-Engine/ci.yml)](https://github.com/Kreative-Performative-Individuals/KPI-Engine/actions)
-[![License](https://img.shields.io/github/license/Kreative-Performative-Individuals/KPI-Engine)](https://github.com/Kreative-Performative-Individuals/KPI-Engine/blob/dev/LICENSE)
-
 The Data Processing Block is a Python library that provides the core logic for the processing of data coming in streaming (collected by sensors in real time) or extracted from the database of historical data stored in the application. Therefore its functioning is based on two core files: "streaming_pipeline.py" for the streaming data and "on_request_pipeline.py" that allows to perform forecasting or data transformation based on historical data whenever the user requests it from the GUI.
 
-```
+
 
 ## 📁 Repository Contents
 
 The repository contains the following files and directories
+
 ```
 📂 data-preprocessing-
 ├── 📂 data
