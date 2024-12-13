@@ -25,14 +25,14 @@ machines = {
 reverted_machine = {v: k for k, v in machines.items()}
 
 # Load the JSON file from CLEANED_PREDICTED_DATA_PATH
-with open(config.CLEANED_PREDICTED_DATA_PATH) as f:
+with open(config.ORIGINAL_ADAPTED_DATA_PATH) as f:
     data = json.load(f)  # Assumes JSON file structure
 
 for i in range(len(data["asset_id"])):
     data["name"][str(i)] = reverted_machine[data["asset_id"][str(i)]]
 
 # Save the updated JSON back to the file (optional)
-with open(config.CLEANED_PREDICTED_DATA_PATH, "w") as f:
+with open(config.ORIGINAL_ADAPTED_DATA_PATH, "w") as f:
     json.dump(data, f, indent=4)
 
 # Print to verify

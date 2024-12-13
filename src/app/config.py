@@ -1,5 +1,5 @@
 import os
-from src.app.notification.mail_sender import MailSender
+from notification.mail_sender import MailSender
 
 PROJECT_FOLDER = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
