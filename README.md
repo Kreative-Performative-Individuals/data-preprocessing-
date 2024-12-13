@@ -39,14 +39,15 @@ The repository contains the following files and directories
 │   │   ├── 🌐 main.py
 │   │   ├── ⚡ on_request_pipeline.py
 │   │   └── ⚡ streaming_pipeline.py
-│   ├── 📂 tests
-│   │   └── 🧪 api_test.py
+│   └── 📂 tests
+│       └── 🧪 api_test.py
 ├── 🔄 .gitignore
 ├── 🐳 Dockerfile
 ├── 📖 README.md
 ├── 🛠 poetry.lock
 └── 🛠 pyproject.toml
----
+```
+
 ## 📁 Repository Contents
 
 The repository contains the following files and directories:
