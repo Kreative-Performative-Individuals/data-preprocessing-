@@ -165,7 +165,7 @@ docker build --tag data_preprocessing .
  docker run --rm --name data-preprocessing- -p 8003:8003 data_preprocessing 
 ```
 
-This command will start a new Docker container named `KPI-Engine` and expose the application on port `8000`.
+This command will start a new Docker container named `data-preprocessing-` and expose the application on port `8000`.
 
 You can now access the Data Preprocessing API by visiting `http://localhost:8000` in your web browser or using tools like Postman.
 
