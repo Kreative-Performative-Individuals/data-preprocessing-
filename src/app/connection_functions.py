@@ -87,7 +87,7 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
                                         # which we have detected nan) is None if type = 'Anomaly'
     if type == 'Anomaly':
         object='Anomaly alert'
-        alert = f"Alert anomaly in machine: '{identity['name']}' - asset: '{identity['asset_id']}' - kpi: '{identity['kpi']}' - operation: '{identity['operation']}'! The probability that this anomaly is correct is {probability}%."
+        alert = f"Alert anomaly in machine: '{identity['name']}' - asset: '{identity['asset_id']}' - kpi: '{identity['kpi']}' - operation: '{identity['operation']}'! The probability that this anomaly is correct is {probability}%.\n\n{identity['explanation']}"
     else:
         object='Malfunctioning alert' 
         alert = f"It has been {counter} days that machine: '{identity['name']}' - asset: '{identity['asset_id']}' returns NaN values in kpi: '{identity['kpi']}' - operation: '{identity['operation']}'. Possible malfunctioning either in the acquisition system or in the machine!"

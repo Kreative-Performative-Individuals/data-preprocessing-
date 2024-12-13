@@ -3,6 +3,7 @@ from src.app.dataprocessing_functions import ad_predict, ad_train
 from src.app.dataprocessing_functions import ADWIN_drift
 from src.app.dataprocessing_functions import tdnn_forecasting_training
 from src.app.dataprocessing_functions import get_model_ad, update_model_forecast, update_model_ad, identity
+from src.app.dataprocessing_functions import ad_exp_train, update_model_ad_exp, ad_exp_predict
 from src.app.connection_functions import get_datapoint, get_historical_data, send_alert, store_datapoint
 
 import warnings
@@ -34,6 +35,8 @@ while c<10:
                 #retrain anomaly detection model
                 model=ad_train(historical_data) #Here we should put the get_historical_data()
                 update_model_ad(cleaned_datapoint, model)
+                explainer=ad_exp_train(historical_data)
+                update_model_ad_exp(cleaned_datapoint, explainer)
 
                 #retrain forecasting algorithm model
                 models = {}
@@ -54,13 +57,15 @@ while c<10:
                 print('I can check the drift again')
                  
         ad_model= get_model_ad(cleaned_datapoint)
+        ad_exp_model= get_model_ad(cleaned_datapoint)
 
         #predict class
         cleaned_datapoint['status'], anomaly_score=ad_predict(cleaned_datapoint , ad_model)
+        explanation = ad_exp_predict(cleaned_datapoint, ad_exp_model)
 
         if cleaned_datapoint['status']=="Anomaly":
             anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
-            
+            anomaly_identity['explanation'] = explanation
             send_alert(anomaly_identity, 'Anomaly', None, anomaly_score)
         
     store_datapoint(new_datapoint) ## CONNECTION WITH API

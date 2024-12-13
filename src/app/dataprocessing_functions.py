@@ -619,7 +619,7 @@ def ad_exp_predict(x, explainer, model):
         x: A dictionary that contains the data point.
         explainer: The LIME explainer model.
         model: The anomaly detection model.
-    Returns: The explanation for the data point.
+    Returns: The explanation for the data point (in a human readable way).
     '''
     dp=pd.DataFrame.from_dict(x, orient="index").T
     dp=dp[features]
@@ -629,7 +629,15 @@ def ad_exp_predict(x, explainer, model):
         model.predict,
         top_labels=1
     )
-    return explanation
+    # readable_output = "Feature Contributions to the Prediction:\n"
+    # for feature, weight in explanation.as_list(label=explanation.top_labels[0]):
+    #     readable_output += f"- {feature}: {weight:.4f}\n"
+    # WORDINGS FOR NON EXPERTS
+    readable_output = "Here’s why the model classified this as an anomaly:\n\n"
+    for feature, weight in explanation.as_list(label=explanation.top_labels[0]):
+        impact = "increased the likelihood" if weight > 0 else "reduced the likelihood"
+        readable_output += f"- {feature} {impact} by {abs(weight):.2f}\n"
+    return readable_output
 
 """'
 ________________________________________________________________________________________________________
