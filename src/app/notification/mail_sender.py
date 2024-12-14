@@ -15,7 +15,7 @@ class MailSender:
         """
         Initializes the MailSender object.
         If mail, password or recipient are None, the user will be asked to input them.
-        Args:
+        Arguments:
             mail (str|None): the email address of the sender.
             password (str|None): the password of the sender.
             recipient (str|None): the email address of the recipient.
