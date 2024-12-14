@@ -30,6 +30,8 @@ statsmodels = "^0.14.4"
 tensorflow = "^2.18.0"
 matplotlib = "^3.9.3"
 jupyter = "^1.1.1"
+lime = "^0.2.0"
+dill = "^0.3.4"
 
 [tool.poetry.dev-dependencies]
 black = "^24.3"         # Code formatter
