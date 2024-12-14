@@ -891,9 +891,12 @@ def ad_train(historical_data):
 def ad_exp_train(historical_data):
     '''
     This function is used to create a LIME explainer object.
-    Args:
-        historical_data: A DataFrame containing historical data.
-    Returns: The LIME explainer object.
+
+    Arguments:
+    - historical_data (pandas dataframe): historical data.
+    
+    Returns: 
+    - explainer (obj): the LIME explainer object.
     '''
     # consider using a tree explainer
     explainer = LimeTabularExplainer(
@@ -926,11 +929,14 @@ def ad_predict(x, model):
 def ad_exp_predict(x, explainer, model):
     '''
     This function is used to predict the explanation for a data point.
-    Args:
-        x: A dictionary that contains the data point.
-        explainer: The LIME explainer model.
-        model: The anomaly detection model.
-    Returns: The explanation for the data point (in a human readable way).
+
+    Arguments:
+    - x (dict): a dictionary that contains the data point for which the explanation is required.
+    - explainer (obj): The LIME explainer model.
+    - model (obj): The anomaly detection model.
+    
+    Returns: 
+    - readable_output (str): The explanation for the data point (in a human readable way).
     '''
     dp=pd.DataFrame.from_dict(x, orient="index").T
     dp=dp[features]
@@ -1137,11 +1143,6 @@ def feature_engineering_pipeline(dataframe, kwargs):
     return result_dataframe
 
 
-# ______________________________________________________________________________________________
-# This function takes in input the kpi_name, machine_name, operation_name and the data and filter
-# the dataset for the given parameters. It returns the filtered data.
-
-
 def extract_features(kpi_name, machine_name, operation_name, data):
     """
     Filter the dataset for specific parameters: KPI name, machine name, and operation name.
@@ -1171,13 +1172,6 @@ def extract_features(kpi_name, machine_name, operation_name, data):
     return filtered_data
 
 
-# ______________________________________________________________________________________________
-# This function performs the Augmented Dickey-Fuller test, so it receives as an input
-# the time series (it can have nan values, so they need to be filled before) and return
-# False if the serie is not stationary and  True if it is (based on the p-value computed
-# in the ADF statistics, appliying a statidtical hypothesis test with alfa = 0.05 to
-# decide wheter reject or not the null hypothesis (time serie is stationary)). If the
-# series is empty or too short, it return None, indicating that the test couldn't be applied.
 
 
 def adf_test(series):
@@ -1221,15 +1215,6 @@ def adf_test(series):
         return None  # If error occurs, consider it non-stationary
 
 
-# ______________________________________________________________________________________________
-# This function allows to detect the seasonality of a time serie. It receive as an input the
-# time series itself, the maximum lag that will be analized (for default) and a threshold that
-# refers to the minimum correlation threshold to consider the ACF as significant (default 0.2).
-# It applies the ACF at incremental lags and store the significant ones, then it reorder them
-# so the first value is the more significant (representing the more prominent seasonality). It
-# returns the highest ACF lag (period of the seasonality) or it returns None if no seasonalaty
-# was detected.
-
 
 def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
     """
@@ -1271,11 +1256,6 @@ def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
     return int(highest_acf_lag)
 
 
-# ______________________________________________________________________________________________
-# This function allows to detect the seasonality of a time serie. It receive as an input the
-# time series itself, apply the FT to detect the maximal peak on frequency that will determine
-# a periodicity in the frequency pattern of the signal and return the period corresponding to it.
-# If it returns None it's because no seasonalaty was detected.
 
 
 def detect_seasonality_fft(df):
@@ -1319,11 +1299,7 @@ def detect_seasonality_fft(df):
     return period
 
 
-# ______________________________________________________________________________________________
-# This function performs the decomposition  of the time serie into its trend, season
-# and residual components (whenever it's possible to implement the analysis). It returns
-# the decomposed time series in a list, of form [trend, seasonal, residual], unless
-# there isn't sufficient data or if some error occurs, in that case it returns None.
+
 
 
 def seasonal_additive_decomposition(dataframe, period):
@@ -1387,11 +1363,6 @@ def seasonal_additive_decomposition(dataframe, period):
         return None
 
 
-# ______________________________________________________________________________________________
-# This function allows to make a time series stationary whenever it is not. It receives as an
-# input the dataserie itself and the computed decompositions (trend, seasonality and residual),
-# allowing multiple seasonality analysis. The function rests the trends and seasons sequentially
-# and returns a single stationary time series that should be stationary.
 
 
 def make_stationary_decomp(df, decompositions):
@@ -1429,11 +1400,6 @@ def make_stationary_decomp(df, decompositions):
     return stationary_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to make a time series stationary whenever it is not. It receive as an
-# input the dataserie itself, apply the difference at the first order if no seasonality period
-# is gave or it applies seasonal differencing. It returns as an output the differenced timeseries,
-# unless some error ocurred, then it returns None.
 
 
 def make_stationary_diff(df, seasonality_period=[]):
@@ -1484,11 +1450,6 @@ def make_stationary_diff(df, seasonality_period=[]):
         return None
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the trends and returns a single detrended
-# time serie.
 
 
 def rest_trend(df, decompositions):
@@ -1523,11 +1484,6 @@ def rest_trend(df, decompositions):
     return detrended_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the seasons and returns a single deseasoned
-# time serie.
 
 
 def rest_seasonality(df, decompositions):
@@ -1558,11 +1514,6 @@ def rest_seasonality(df, decompositions):
     return deseasoned_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the seasons and returns a single deseasoned
-# time serie.
 
 
 def get_residuals_func(df, decompositions):
