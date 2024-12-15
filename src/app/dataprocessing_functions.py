@@ -864,6 +864,27 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 
 def ad_train(historical_data):
+    """
+    Trains an anomaly detection model using Isolation Forest on historical data.
+    The training consists in optimizing the contamination parameter using the Silhouette Score to balance cluster separation
+    between the detected normal class and the anomaly class. If no acceptable Silhouette Score (> 0.70) is found, 
+    the contamination is set to a very low value (1e-5) since it means that no anomaly is present in the train set.
+    Features with all `NaN` values are excluded, and residual missing values are imputed with zeros to ensure proper working. 
+    
+
+    Arguments:
+    - historical_data (DataFrame): a dataset containing historical feature values. Each row represents a data point, and columns correspond to features.
+    Missing values are handled but data should be cleaned first to ensure valuable training.
+
+    Returns:
+    - model (obj): IsolationForest trained model.
+
+    Example:
+        >>> model = ad_train(historical_data)
+        >>> print(model)
+        IsolationForest(contamination=0.11, n_estimators=200)  # Example output
+    """
+
     # account also for the case in which one feature may not be definable for a kpi
 
     train_set = pd.DataFrame(historical_data)[features]
@@ -891,13 +912,21 @@ def ad_train(historical_data):
 def ad_exp_train(historical_data):
     '''
     This function is used to create a LIME explainer object.
-    Args:
-        historical_data: A DataFrame containing historical data.
-    Returns: The LIME explainer object.
+
+    Arguments:
+    - historical_data (pandas dataframe): historical data.
+    
+    Returns: 
+    - explainer (obj): the LIME explainer object.
     '''
     # consider using a tree explainer
+    train_set = pd.DataFrame(historical_data)[features]
+    nan_columns = train_set.columns[train_set.isna().all()]
+    train_set = train_set.drop(columns=nan_columns)
+    train_set = train_set.fillna(0)
+
     explainer = LimeTabularExplainer(
-        historical_data[features].values, 
+        train_set.values, 
         mode='classification', 
         feature_names=features,
         class_names=['Normal', 'Anomaly']
@@ -906,6 +935,23 @@ def ad_exp_train(historical_data):
 
 
 def ad_predict(x, model):
+    """
+    Predicts the anomaly status ('Anomaly' or 'Normal') of a datapoint using a trained Isolation Forest model.
+    It calculates the anomaly probability based on the model's decision function.
+
+    Arguments:
+    - x (dict): single datapoint.
+    - model (obj): the last trained model of Isolation Forest.
+
+    Returns:
+    - x (dict): the original datapoint enriched of the new field 'status': 'Anomaly/Normal'. 
+    - `anomaly_prob` (int): The anomaly probability as a percentage (0–100).
+
+    Example:
+        >>> status, prob = ad_predict(datapoint, model)
+        >>> print(status, prob)
+        Normal 85  # Example output
+    """
     # account for the case in which one feature may be nan also after the imputation since the feature is not definable for that kpi.
     dp = pd.DataFrame.from_dict(x, orient="index").T
     dp = dp[features]
@@ -926,11 +972,14 @@ def ad_predict(x, model):
 def ad_exp_predict(x, explainer, model):
     '''
     This function is used to predict the explanation for a data point.
-    Args:
-        x: A dictionary that contains the data point.
-        explainer: The LIME explainer model.
-        model: The anomaly detection model.
-    Returns: The explanation for the data point (in a human readable way).
+
+    Arguments:
+    - x (dict): a dictionary that contains the data point for which the explanation is required.
+    - explainer (obj): The LIME explainer model.
+    - model (obj): The anomaly detection model.
+    
+    Returns: 
+    - readable_output (str): The explanation for the data point (in a human readable way).
     '''
     dp=pd.DataFrame.from_dict(x, orient="index").T
     dp=dp[features]
@@ -958,15 +1007,6 @@ ________________________________________________________________________________
 """ In this code we stored the functions that were used in the feature engineering section of the
 preprocessing pipeline, including a brief description of their inputs, outputs and functioning"""
 
-# THIS IS THE MAIN FUNCTION FOR THE FEATURE ENGINEERING
-# The input dataframe corresponds to a filtrate version of the dataset for a given machine, kpi and
-# operation, so it contains 9-10  columns (depending on the presence ['sum', 'avg','min', 'max', 'var'])
-# and the amount of entries correspondent to the selected time range.
-# It also take kwargs as a parameter, which recall the information about how to set the time serie in
-# order to have a proper input for the machine learning algortithms.
-# It performs several operations on the time series, depending on the kwargs, such as  make_stationary, detrend,
-# deseasonalize, get_residuals, scaler.
-# It gives as an output the transformed time serie.
 
 
 def feature_engineering_pipeline(dataframe, kwargs):
@@ -1137,11 +1177,6 @@ def feature_engineering_pipeline(dataframe, kwargs):
     return result_dataframe
 
 
-# ______________________________________________________________________________________________
-# This function takes in input the kpi_name, machine_name, operation_name and the data and filter
-# the dataset for the given parameters. It returns the filtered data.
-
-
 def extract_features(kpi_name, machine_name, operation_name, data):
     """
     Filter the dataset for specific parameters: KPI name, machine name, and operation name.
@@ -1171,13 +1206,6 @@ def extract_features(kpi_name, machine_name, operation_name, data):
     return filtered_data
 
 
-# ______________________________________________________________________________________________
-# This function performs the Augmented Dickey-Fuller test, so it receives as an input
-# the time series (it can have nan values, so they need to be filled before) and return
-# False if the serie is not stationary and  True if it is (based on the p-value computed
-# in the ADF statistics, appliying a statidtical hypothesis test with alfa = 0.05 to
-# decide wheter reject or not the null hypothesis (time serie is stationary)). If the
-# series is empty or too short, it return None, indicating that the test couldn't be applied.
 
 
 def adf_test(series):
@@ -1221,15 +1249,6 @@ def adf_test(series):
         return None  # If error occurs, consider it non-stationary
 
 
-# ______________________________________________________________________________________________
-# This function allows to detect the seasonality of a time serie. It receive as an input the
-# time series itself, the maximum lag that will be analized (for default) and a threshold that
-# refers to the minimum correlation threshold to consider the ACF as significant (default 0.2).
-# It applies the ACF at incremental lags and store the significant ones, then it reorder them
-# so the first value is the more significant (representing the more prominent seasonality). It
-# returns the highest ACF lag (period of the seasonality) or it returns None if no seasonalaty
-# was detected.
-
 
 def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
     """
@@ -1271,11 +1290,6 @@ def detect_seasonality_acf(df, max_lags=365, threshold=0.2):
     return int(highest_acf_lag)
 
 
-# ______________________________________________________________________________________________
-# This function allows to detect the seasonality of a time serie. It receive as an input the
-# time series itself, apply the FT to detect the maximal peak on frequency that will determine
-# a periodicity in the frequency pattern of the signal and return the period corresponding to it.
-# If it returns None it's because no seasonalaty was detected.
 
 
 def detect_seasonality_fft(df):
@@ -1319,11 +1333,7 @@ def detect_seasonality_fft(df):
     return period
 
 
-# ______________________________________________________________________________________________
-# This function performs the decomposition  of the time serie into its trend, season
-# and residual components (whenever it's possible to implement the analysis). It returns
-# the decomposed time series in a list, of form [trend, seasonal, residual], unless
-# there isn't sufficient data or if some error occurs, in that case it returns None.
+
 
 
 def seasonal_additive_decomposition(dataframe, period):
@@ -1387,11 +1397,6 @@ def seasonal_additive_decomposition(dataframe, period):
         return None
 
 
-# ______________________________________________________________________________________________
-# This function allows to make a time series stationary whenever it is not. It receives as an
-# input the dataserie itself and the computed decompositions (trend, seasonality and residual),
-# allowing multiple seasonality analysis. The function rests the trends and seasons sequentially
-# and returns a single stationary time series that should be stationary.
 
 
 def make_stationary_decomp(df, decompositions):
@@ -1429,11 +1434,6 @@ def make_stationary_decomp(df, decompositions):
     return stationary_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to make a time series stationary whenever it is not. It receive as an
-# input the dataserie itself, apply the difference at the first order if no seasonality period
-# is gave or it applies seasonal differencing. It returns as an output the differenced timeseries,
-# unless some error ocurred, then it returns None.
 
 
 def make_stationary_diff(df, seasonality_period=[]):
@@ -1484,11 +1484,6 @@ def make_stationary_diff(df, seasonality_period=[]):
         return None
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the trends and returns a single detrended
-# time serie.
 
 
 def rest_trend(df, decompositions):
@@ -1523,11 +1518,6 @@ def rest_trend(df, decompositions):
     return detrended_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the seasons and returns a single deseasoned
-# time serie.
 
 
 def rest_seasonality(df, decompositions):
@@ -1558,11 +1548,6 @@ def rest_seasonality(df, decompositions):
     return deseasoned_series
 
 
-# ______________________________________________________________________________________________
-# This function allows to rest the trend from a given time series.  It receives as an input the
-# dataserie itself and the computed decompositions (trend, seasonality and residual), allowing
-# multiple seasonality analysis. The function rests the seasons and returns a single deseasoned
-# time serie.
 
 
 def get_residuals_func(df, decompositions):
@@ -1673,6 +1658,28 @@ def split_data(x_data, y_data, train_size=0.8, val_size=0.1, test_size=0.1):
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
+def safe_normalize(data, mean, std):
+    """
+    Avoid division by zero by setting std to 1 for constant data
+    Arguments:
+    - data (array): The dataset to be normalized. 
+    - mean (float): The mean value of the training dataset.
+    - std (float): The standard deviation of the training dataset. 
+
+    Returns:
+    - normalized_data (array): The normalized dataset.
+
+    Example:
+    >>> data = np.array([10, 10, 10])  
+    >>> mean = np.mean(data)           
+    >>> std = np.std(data)             
+    >>> normalized_data = safe_normalize(data, mean, std)
+
+    """
+    std = np.where(std == 0, 1, std)  
+    return (data - mean) / std
+
+
 def create_TDNN(hidden_units, lr):
     """
     Create a Time-Delay Neural Network (TDNN) model.
@@ -1725,11 +1732,11 @@ def training_TDNN(TDNN_model, x_train, y_train, x_val, y_val, epochs):
     history = TDNN_model.fit(
         x_train, y_train, epochs=epochs, validation_data=(x_val, y_val), verbose=0
     )
-    print(history.history.keys())
+    #print(history.history.keys())
     loss_training = history.history["loss"]
-    print("Loss training: ", loss_training[-1])
+    #print("Loss training: ", loss_training[-1])
     loss_validation = history.history["val_loss"]
-    print("Loss validation: ", loss_validation[-1])
+    #print("Loss validation: ", loss_validation[-1])
     return loss_validation[-1]
 
 
@@ -1776,10 +1783,11 @@ def objective_TDNN(trial, time_series):
     y_std = np.std(y_train)
 
     # Normalize training and test data with mean and variance of the training
-    x_train = (x_train - x_mean) / x_std
-    x_val = (x_val - x_mean) / x_std
-    y_train = (y_train - y_mean) / y_std
-    y_val = (y_val - y_mean) / y_std
+    x_train = safe_normalize(x_train, x_mean, x_std)
+    x_val = safe_normalize(x_val, x_mean, x_std)
+    y_train = safe_normalize(y_train, y_mean, y_std)
+    y_val = safe_normalize(y_val, y_mean, y_std)
+
 
     # Reshape the input data to (1, num_sequences, tau)
     x_train = np.expand_dims(x_train, axis=0)  # Shape (1, num_sequences, tau)
@@ -1854,10 +1862,10 @@ def tdnn_forecasting_training(series, n_trials=10):
     stats = np.array([x_mean, x_std, y_mean, y_std])
 
     # Normalize training and test data with training stats
-    x_training = (x_training - x_mean) / x_std
-    x_test = (x_test - x_mean) / x_std
-    y_training = (y_training - y_mean) / y_std
-    y_test = (y_test - y_mean) / y_std
+    x_training = safe_normalize(x_training, x_mean, x_std)
+    x_test = safe_normalize(x_test, x_mean, x_std)
+    y_training = safe_normalize(y_training, y_mean, y_std)
+    y_test = safe_normalize(y_test, y_mean, y_std)
 
     # Reshape input data to (1, num_sequences, tau)
     x_training = np.expand_dims(x_training, axis=0)  # Shape (1, num_sequences, tau)
@@ -1877,7 +1885,7 @@ def tdnn_forecasting_training(series, n_trials=10):
 
     # calculate MSE
     TDNN_test_MSE = best_model_TDNN.evaluate(x_test, y_test)
-    print("Test MSE: ", TDNN_test_MSE)
+    #print("Test MSE: ", TDNN_test_MSE)
 
     # Denormalize predictions and targets for plotting
     y_pred_training = y_pred_training * y_std + y_mean

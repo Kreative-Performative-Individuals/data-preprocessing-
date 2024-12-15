@@ -1,6 +1,4 @@
-from src.app.dataprocessing_functions import tdnn_forecasting_prediction
-from src.app.dataprocessing_functions import feature_engineering_pipeline
-from src.app.dataprocessing_functions import get_model_forecast
+from src.app.dataprocessing_functions import tdnn_forecasting_prediction, feature_engineering_pipeline, get_model_forecast
 from src.app.connection_functions import get_historical_data
 import pandas as pd
 
