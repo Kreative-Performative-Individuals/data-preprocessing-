@@ -1,4 +1,4 @@
-import config
+import config 
 import json
 
 # Original machine dictionary
