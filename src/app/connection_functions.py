@@ -4,6 +4,7 @@ import src.app.config as config
 from datetime import timedelta
 from src.app.notification.mail_sender import MailSender
 from src.app.real_time.request import KPIStreamingRequest, KPIValidator
+import requests
 
 
 def get_datapoint(i):
@@ -53,28 +54,29 @@ def get_next_datapoint(kpi_validator: KPIValidator, file=config.CLEANED_PREDICTE
 
 
 def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end):
-    # In some manner receives data frame filtered from the database in format dataframe
-    #Maybe we can define that if we give timestap_start = None, timestamp_end = None,
-    #they have to return us x values in the past starting from the last stored point
+     # In some manner receives data frame filtered from the database in format dataframe
+     #Maybe we can define that if we give timestap_start = None, timestamp_end = None,
+     #they have to return us x values in the past starting from the last stored point
+    
+    
+     url_db = "http://localhost:8002/"
+     
+     params = {
+     "start_date": timestap_start,
+     "end_date": timestamp_end,
+     "kpi_name": kpi,
+     "machines ": machine_name,
+     "operations": operation,
+     "asset_id": asset_id}
 
-    url_db = "http://localhost:8000/"
-    #Use this URL if you are connecting from the compose.
-    #url_db = "http://db:8000/"
-    params = {
-    "machine_name": machine_name,
-    "asset_id": asset_id,
-    "kpi": kpi,
-    "operation": operation,
-    "timestamp_start": timestap_start,
-    "timestamp_end": timestamp_end}
-    # Send the GET request
-    response = requests.get(url_db + "historical_data", params=params)
-    print(response)
+     # Send the GET request
+     response = requests.get(url_db + "get_data_for_preprocessing", params=params)
+     print(response)
 
-    return response
+     return response
 
 
-def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
+'''def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
     with open(config.HISTORICAL_DATA_PATH, "r") as file:
         historical = json.load(file)
     historical_data = pd.DataFrame(historical)
@@ -102,7 +104,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
     historical_data['time'] = historical_data['time'].astype(str)
 
     return historical_data
-
+'''
 
 def send_alert(identity, type, counter=None,
                probability=None):  #the identity returns the type of Kpi and machine for which the anomaly/nan values
@@ -133,6 +135,18 @@ def send_alert(identity, type, counter=None,
     config.MAILER.send_mail(object, alert)
 
 
+
+def store_datapoint(new_datapoint):
+
+    with open(config.NEW_DATAPOINT_PATH, "w") as json_file:
+        json.dump(new_datapoint, json_file, indent=1) 
+
+
+    url_db = "http://localhost:8002/"
+    response = requests.post(url_db + "store_datapoint", params=new_datapoint)
+
+'''
+
 def store_datapoint(new_datapoint):
     """
     Stores a new datapoint in both the current and historical data files.
@@ -154,3 +168,4 @@ def store_datapoint(new_datapoint):
 
     with open(config.NEW_DATAPOINT_PATH, "w") as file:
         json.dump(historical.to_dict(), file, indent=1)
+'''
