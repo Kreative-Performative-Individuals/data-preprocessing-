@@ -1,6 +1,6 @@
 """ RealTimeRequest class definition. """
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 import re
 import json
 

@@ -31,4 +31,4 @@ sender_email = "smartdashboard.teamb@libero.it"
 sender_password = "SmartApp24-25"
 recipient_email = "example@email.com"
 
-MAILER =MailSender(mail=sender_email, password=sender_password, recipient=recipient_email)
+MAILER = MailSender(mail=sender_email, password=sender_password, recipient=recipient_email)

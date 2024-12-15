@@ -117,11 +117,11 @@ def get_batch(x, f):
     Retrieve a specific batch of data for the given feature from the store.
 
     This function loads the Pickle file 'store.pkl' and search for the batch of data in the saved structure according
-    to the identity of the kpi (extracted from x) and to the specific feature (f in ['sum', 'avg', 'min', 'max', 'var']) 
+    to the identity of the kpi (extracted from x) and to the specific feature (f in ['sum', 'avg', 'min', 'max', 'var'])
     it needs to be handled.
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
@@ -134,11 +134,11 @@ def get_batch(x, f):
 
     Example:
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
-             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}  
+             'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
     >>> feature = 'min'
     >>> get_batch(current_datapoint, feature)
     [0.5, 0.6, 0.7, 0.8]
-    """ 
+    """
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     # This function will return batch
@@ -150,14 +150,14 @@ def get_batch(x, f):
 def update_batch(x, f): 
     """
     Update the batch data for a specific feature in the store.
-    
-    This function loads the existing data from the Pickle file 'store.pkl', updates the specified batch by 
+
+    This function loads the existing data from the Pickle file 'store.pkl', updates the specified batch by
     appending a new value, and ensures the batch does not exceed the predefined length.
-    If the batch length exceeds the limit, the oldest value is removed. Finally, the updated batch is 
+    If the batch length exceeds the limit, the oldest value is removed. Finally, the updated batch is
     stored back into the Pickle file.
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed and the values to be appended. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed and the values to be appended.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
@@ -195,18 +195,18 @@ def update_batch(x, f):
 def update_counter(x, reset=False):
     """
     Update the counter for data that report problems in the acquisition.
-    
-    This function loads the existing data from the Pickle file and either increments the counter 
+
+    This function loads the existing data from the Pickle file and either increments the counter
     or resets it to zero based on the `reset` flag. The counter is associated to a specific KPI of a specific machine.
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
         - 'kpi' (str): The key performance indicator.
         - 'operation' (str): The operation type.
-    - reset (bool, optional): If `True`, the counter is reset to 0. If `False`, the counter is incremented. 
+    - reset (bool, optional): If `True`, the counter is reset to 0. If `False`, the counter is incremented.
       Default is `False`.
 
     Returns:
@@ -219,7 +219,7 @@ def update_counter(x, reset=False):
     >>> update_counter(current_datapoint, reset=False)  # counter becomes 2
     >>> update_counter(current_datapoint, reset=True)   # counter becomes 0
     """
-        
+
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     if not reset:
@@ -234,12 +234,12 @@ def update_counter(x, reset=False):
 def get_counter(x):
     """
     Retrieve the current counter value for a specific KPI and machine from the Pickle file.
-    
-    This function loads the data from the Pickle file 'store.pkl' and returns the current counter 
+
+    This function loads the data from the Pickle file 'store.pkl' and returns the current counter
     associated with a specific combination of 'name', 'asset_id', 'kpi', and 'operation'.
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
@@ -263,19 +263,19 @@ def get_counter(x):
 def get_model_ad(x):
     """
     Retrieve the pre-trained model for the Anomaly detector from the Pickle file.
-    
-    This function loads the data from the Pickle file 'store.pkl' and returns the last trained 
+
+    This function loads the data from the Pickle file 'store.pkl' and returns the last trained
     Isolation forest model for the specific KPI associated to the specific machine (information extracted
     from the passed datapoint x).
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
         - 'kpi' (str): The key performance indicator.
         - 'operation' (str): The operation type.
-    
+
     Returns:
     - ob: Isolation forest model.
 
@@ -283,7 +283,7 @@ def get_model_ad(x):
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working',
                              'sum': 24025.0, 'avg': 2280.0, 'min': 330.0, 'max': 1224.0, 'var': nan}
     >>> get_model_ad(current_datapoint)
-    """ 
+    """
     with open(config.STORE_PKL, "rb") as file:
         info = pickle.load(file)
     return info[x["name"]][x["asset_id"]][x["kpi"]][x["operation"]][2]
@@ -291,7 +291,7 @@ def get_model_ad(x):
 def get_model_ad_exp(x):
     '''
     This function is used to get the model for the LIME explainer.
-    
+
     Arguments:
         x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
     '''
@@ -307,12 +307,12 @@ def get_model_ad_exp(x):
 def update_model_ad(x, model):
     """
     Update the model with the last trained one in the Pickle file.
-    
+
     This function loads the existing data from the Pickle file and updates the model for the specific
     KPI and machine (extracted from the passed datapoint).
-    
+
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
@@ -342,7 +342,7 @@ def update_model_ad(x, model):
 def update_model_ad_exp(x, explainer):
     '''
     This function is used to update the LIME explainer model.
-    
+
     Arguments:
         x: A dictionary that contains keys to locate the entry (e.g., {'name', 'asset_id', 'kpi', 'operation'}).
         explainer: The LIME explainer model.
@@ -360,12 +360,12 @@ def update_model_ad_exp(x, explainer):
 def get_model_forecast(x):
     """
     Retrieve the forecast model and associated parameters from the Pickle file 'forecasting_models.pkl'.
-    
-    This function loads the Pickle file containing forecasting models and extracts the Keras model along with its parameters and statistics 
+
+    This function loads the Pickle file containing forecasting models and extracts the Keras model along with its parameters and statistics
     for each sub-feature.
 
     Arguments:
-    - x (dict): The datapoint from which extract the identity of the timeseries being processed. 
+    - x (dict): The datapoint from which extract the identity of the timeseries being processed.
       Expected keys include:
         - 'name' (str): The type of the machine.
         - 'asset_id' (str): The asset identifier.
@@ -385,7 +385,7 @@ def get_model_forecast(x):
         ...
     }
     """
-    with open(config.STORE_PKL, "rb") as file:            
+    with open(config.STORE_PKL, "rb") as file:
             info = pickle.load(file)
     model_info=info[x['name']][x['asset_id']][x['kpi']][x['operation']][3]
     models_for_subfeatures = {}
@@ -452,8 +452,8 @@ In this piece of code there are functions related to the validation, imputation 
 def check_f_consistency(x):
     """
     Check the consistency of statistical values (min, avg, max, sum) for a given data point.
-    
-    This function checks whether the provided statistical values (`min`, `avg`, `max`, `sum`) 
+
+    This function checks whether the provided statistical values (`min`, `avg`, `max`, `sum`)
     for a data point satisfy a basic consistency rule: `min`<= `avg`<= `max`<= `sum`).
     - If any of the relation is violated, the respective indicator of the involving features is set to `False`.
     - Missing values (NaN) for any of the statistics will also flag the respective indicator as `False`.
@@ -479,22 +479,22 @@ def check_f_consistency(x):
                              'min': 100, 'avg': 150, 'max': 200, 'sum': 500}
     >>> check_f_consistency(x)
     [True, True, True, True]  # All values are consistent
-    
+
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
                              'min': 200, 'avg': 100, 'max': 400, 'sum': 500}
     >>> check_f_consistency(x)
     [False, False, True, True]  # Values are inconsistent
-    
+
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
                              'min': NaN, 'avg': 100, 'max': 50, 'sum': 500}
     >>> check_f_consistency(x)
     [False, False, False, True]  # Values are inconsistent
-    
+
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
                              'min': NaN, 'avg': 100, 'max': 50, 'sum': 10}
     >>> check_f_consistency(x)
     [False, False, False, False]  # Values are inconsistent
-    
+
     >>> current_datapoint = {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'riveting', 'kpi': 'good_cycles', 'operation': 'working'
                              'min': NaN, 'avg': NaN, 'max': NaN, 'sum': 10}
     >>> check_f_consistency(x)
@@ -540,7 +540,7 @@ def validate(x):
     """
     Takes in input the datapoint and checks its reliability in
     terms of format and check (via call to check_range(x)).
-    In general, if the data point is too severly compromised (one of the identity fields is 
+    In general, if the data point is too severly compromised (one of the identity fields is
     nan or missing, all features are nan), then it is labeled as 'Corrupted' and saved
     into the database (the label will serve to avoid considering the datapoint
     in any further processing).
@@ -581,11 +581,13 @@ def validate(x):
         # store_datapoint(x)
         return None, old_counter
 
-    # if the datapoint comes here it means that it didn't miss any information about the identity and at least one feature that is not nan.
+    # if the datapoint comes here it means that it didn't miss any information about the identity and at least one
+    # feature that is not nan.
 
     x = check_range(x)  # Here i change letter since i need x to get the counter later.
 
-    # if the datapoint comes here it means that at least one feature value is respecting the range constraint for the specific kpi.
+    # if the datapoint comes here it means that at least one feature value is respecting the range constraint for the
+    # specific kpi.
     if x:
         # Check if the features (min, max, sum, avg) satisfy the basic logic rule min<=avg<=max<=sum
         cc = check_f_consistency(x)
@@ -596,7 +598,8 @@ def validate(x):
                 store_datapoint(x)
                 return None, old_counter
         elif all(c for c in cc):  # the datapoint verifies the logic rule.
-            # if now there is a nan it could be either the result of the range check or that the datapoint intrinsically has these nans.
+            # if now there is a nan it could be either the result of the range check or that the datapoint
+            # intrinsically has these nans.
             any_nan = False
             for f in features:
                 if pd.isna(x[f]):
@@ -628,7 +631,7 @@ def check_range(x):
     Returns:
     - None: if all the features values fail the check range, the datapoint
     is labeled as 'Corrupted' and saved into the database.
-    - x (dict): the checked datapoint, eventually transformed. 
+    - x (dict): the checked datapoint, eventually transformed.
     """
     # Retrieve the specific range for the kpi that we are dealing with
     l_thr = kpi[x["kpi"]][0][0]
@@ -659,7 +662,7 @@ def check_range_ai(x):
     - x (dict): the datapoint under evaluation.
 
     Returns:
-    - flag: 'True' if all the datapoint's feature values pass the range check, 'False' otherwise. 
+    - flag: 'True' if all the datapoint's feature values pass the range check, 'False' otherwise.
     """
     flag = True  # takes trace of: has the datapoint passed the range check without being changed?
     l_thr = kpi[x["kpi"]][0][0]
@@ -682,9 +685,9 @@ def check_range_ai(x):
 def predict_missing(batch):
     """
     Predicts missing values in a batch of data passed in input.
-    
-    This function imputes missing values (`NaN`) in a batch of data. 
-    If the batch contains a sufficient number of values (i.e., 2*seasonality, set at 7), 
+
+    This function imputes missing values (`NaN`) in a batch of data.
+    If the batch contains a sufficient number of values (i.e., 2*seasonality, set at 7),
     it uses an Exponential Smoothing model with seasonal and trend components to predict the missing value.
     Otherwise, it calculates the mean of the available values for imputation.
 
@@ -702,7 +705,7 @@ def predict_missing(batch):
         >>> batch = [3.5, np.nan, 4.2, 5.1, np.nan, 6.3, 7.2, np.nan, 1.6, 2.3, 0.1, 5.2, np.nan, 9.0, 10.3]
         >>> prediction = predict_missing(batch)
         >>> print(prediction)
-        4.7 
+        4.7
 
     """
     seasonality = 7
@@ -720,7 +723,9 @@ def predict_missing(batch):
     else:
         return (
             np.nan
-        )  # Leave the feature as nan since we don't have any information in the batch to make the imputation. If the datapoint has a nan because the feature is not definable for it, it will be leaved as it is from the imputator.
+        )  # Leave the feature as nan since we don't have any information in the batch to make the imputation. If the
+        # datapoint has a nan because the feature is not definable for it, it will be leaved as it is from the
+        # imputator.
 
 
 def imputer(x):
@@ -728,7 +733,7 @@ def imputer(x):
     Imputes missing values in a datapoint and ensures consistency with feature constraints.
 
     This function attempts to impute missing values in a datapoint using statistical models like Exponential Smoothing (via `predict_missing`).
-    If, after the imputation, the new vlaue fails the consistency or the range check, then Last Value Carried Forward (LVCF) method is used. 
+    If, after the imputation, the new vlaue fails the consistency or the range check, then Last Value Carried Forward (LVCF) method is used.
     The function, also takes care of storing the new value in the batch.
 
     Arguments:
@@ -773,16 +778,17 @@ def imputer(x):
         return x
 
 
-def cleaning_pipeline(x):
+def cleaning_pipeline(x, send_alerts=True):
     """
     Processes and cleans a datapoint by validating, imputing, and sending alerts for faulty data.
 
-    This function wraps all the cleaning stages into one pipeline, also taking care of detecting whether a transformation of the datapoint as 
+    This function wraps all the cleaning stages into one pipeline, also taking care of detecting whether a transformation of the datapoint as
     occurred. If so and the number of consecutive transformations overcome a threshold (arbitrarily set at 3 in fault_aq_tol), then it triggers
     the alert.
 
     Arguments:
     - x (dict): A dictionary representing a single datapoint.
+    - send_alerts (bool): If `True`, the function sends an alert when a faulty datapoint is detected. Default is `True`.
 
     Returns:
     - dict: The cleaned and imputed datapoint after processing.
@@ -800,7 +806,8 @@ def cleaning_pipeline(x):
     new_counter = get_counter(x)
     if new_counter == old_counter + 1 and new_counter >= faulty_aq_tol:
         id = {key: x[key] for key in identity if key in x}
-        send_alert(id, "Nan", new_counter)
+        if send_alerts:
+            send_alert(id, "Nan", new_counter)
     cleaned_dp = imputer(validated_dp)
 
     return cleaned_dp
@@ -867,10 +874,10 @@ def ad_train(historical_data):
     """
     Trains an anomaly detection model using Isolation Forest on historical data.
     The training consists in optimizing the contamination parameter using the Silhouette Score to balance cluster separation
-    between the detected normal class and the anomaly class. If no acceptable Silhouette Score (> 0.70) is found, 
+    between the detected normal class and the anomaly class. If no acceptable Silhouette Score (> 0.70) is found,
     the contamination is set to a very low value (1e-5) since it means that no anomaly is present in the train set.
-    Features with all `NaN` values are excluded, and residual missing values are imputed with zeros to ensure proper working. 
-    
+    Features with all `NaN` values are excluded, and residual missing values are imputed with zeros to ensure proper working.
+
 
     Arguments:
     - historical_data (DataFrame): a dataset containing historical feature values. Each row represents a data point, and columns correspond to features.
@@ -915,8 +922,8 @@ def ad_exp_train(historical_data):
 
     Arguments:
     - historical_data (pandas dataframe): historical data.
-    
-    Returns: 
+
+    Returns:
     - explainer (obj): the LIME explainer object.
     '''
     # consider using a tree explainer
@@ -926,8 +933,8 @@ def ad_exp_train(historical_data):
     train_set = train_set.fillna(0)
 
     explainer = LimeTabularExplainer(
-        train_set.values, 
-        mode='classification', 
+        train_set.values,
+        mode='classification',
         feature_names=features,
         class_names=['Normal', 'Anomaly']
         )
@@ -944,7 +951,7 @@ def ad_predict(x, model):
     - model (obj): the last trained model of Isolation Forest.
 
     Returns:
-    - x (dict): the original datapoint enriched of the new field 'status': 'Anomaly/Normal'. 
+    - x (dict): the original datapoint enriched of the new field 'status': 'Anomaly/Normal'.
     - `anomaly_prob` (int): The anomaly probability as a percentage (0–100).
 
     Example:
@@ -977,15 +984,15 @@ def ad_exp_predict(x, explainer, model):
     - x (dict): a dictionary that contains the data point for which the explanation is required.
     - explainer (obj): The LIME explainer model.
     - model (obj): The anomaly detection model.
-    
-    Returns: 
+
+    Returns:
     - readable_output (str): The explanation for the data point (in a human readable way).
     '''
     dp=pd.DataFrame.from_dict(x, orient="index").T
     dp=dp[features]
     dp=dp.fillna(0)
     explanation = explainer.explain_instance(
-        dp.values[0], 
+        dp.values[0],
         model.predict,
         top_labels=1
     )
@@ -1011,7 +1018,7 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 def feature_engineering_pipeline(dataframe, kwargs):
     """
-    Performs feature engineering on the time series data. 
+    Performs feature engineering on the time series data.
     Depending on the input parameters (provided via kwargs), it applies operations such as making the data stationary, detrending, deseasonalizing, extracting residuals, and scaling the features.
 
     Arguments:
@@ -1022,7 +1029,7 @@ def feature_engineering_pipeline(dataframe, kwargs):
             'deseasonalize': Remove seasonality from the data (default is False).
             'get_residuals': Extract residuals from the data (default is False).
             'scaler': Apply z-score scaling to the data (default is False).
-        
+
     Returns:
         - result_dataframe (DataFrame): A DataFrame with the transformed features based on the specified operations (e.g., stationary, detrended, deseasonalized, etc.) and the original time and feature columns.
 
@@ -1192,7 +1199,7 @@ def extract_features(kpi_name, machine_name, operation_name, data):
 
     Example:
     >>> filtered_data = extract_features('working_time', 'Laser Cutter', 'working', dataset)
-    
+
     """
     filtered_data = data[
         (data["name"] == machine_name)
@@ -1210,7 +1217,7 @@ def extract_features(kpi_name, machine_name, operation_name, data):
 
 def adf_test(series):
     """
-    Perform the Augmented Dickey-Fuller (ADF) test to assess stationarity of a time series. 
+    Perform the Augmented Dickey-Fuller (ADF) test to assess stationarity of a time series.
     The function returns a boolean indicating stationarity based on the p-value (< 0.05) of the statistical hypothesis test. If the series is empty or too short, it returns None.
 
     Arguments:
@@ -1338,7 +1345,7 @@ def detect_seasonality_fft(df):
 
 def seasonal_additive_decomposition(dataframe, period):
     """
-    Decompose a time series into trend, seasonal, and residual components using an additive model. 
+    Decompose a time series into trend, seasonal, and residual components using an additive model.
     If sufficient data is not available or an error occurs, the function returns None.
 
     Arguments:
@@ -1352,7 +1359,7 @@ def seasonal_additive_decomposition(dataframe, period):
     Example:
     >>> decomposition = seasonal_additive_decomposition(time_series, period=12)
     [[trend], [seasonal], [residual]]
-    
+
     """
     # Check if the filtered DataFrame has enough data for the decomposition
     if dataframe.empty:
@@ -1413,7 +1420,7 @@ def make_stationary_decomp(df, decompositions):
 
     Example:
     >>> stationary_series = make_stationary_decomp(time_series, decompositions)
-    
+
     """
     # Initialize the stationary series with the original data
     stationary_series = df.copy()
@@ -1451,7 +1458,7 @@ def make_stationary_diff(df, seasonality_period=[]):
 
     Example:
     >>> stationary_series = make_stationary_diff(time_series, seasonality_period=[7])
-    
+
     """
     try:
         # Compute the baseline of the original series
@@ -1499,7 +1506,7 @@ def rest_trend(df, decompositions):
 
     Example:
     >>> detrended_series = rest_trend(time_series, decompositions)
-    
+
     """
     # Initialize the detrended series with the original data
     detrended_series = df.copy()
@@ -1533,7 +1540,7 @@ def rest_seasonality(df, decompositions):
 
     Example:
     >>> deseasoned_series = rest_seasonality(time_series, decompositions)
-    
+
     """
     # Initialize the deseasoned series with the original data
     deseasoned_series = df.copy()
@@ -1563,7 +1570,7 @@ def get_residuals_func(df, decompositions):
 
     Example:
     >>> residual_series = get_residuals_func(time_series, decompositions)
-    
+
     """
     # Ensure decompositions is not empty
     if not decompositions or len(decompositions) == 0:
@@ -1608,7 +1615,7 @@ def create_sequences(data, tau):
         array([[1., 2., 3.],
             [2., 3., 4.],
             [3., 4., 5.]])
-    
+
     """
     num_sequences = len(data) - tau + 1  # Number of sequences
     sequences = np.zeros((num_sequences, tau))  # Initialize matrix
@@ -1629,7 +1636,7 @@ def split_data(x_data, y_data, train_size=0.8, val_size=0.1, test_size=0.1):
     - train_size (float): Proportion of data to allocate for training. (default=0.8)
     - val_size (float): Proportion of data to allocate for validation. (default=0.1)
     - test_size (float): Proportion of data to allocate for testing. (default=0.1)
-    
+
     Returns:
     - x_train, x_val, x_test, y_train, y_val, y_test (tuple of ndarrays): The split input and target data sets.
 
@@ -1639,7 +1646,7 @@ def split_data(x_data, y_data, train_size=0.8, val_size=0.1, test_size=0.1):
     >>> split_data(x_data, y_data)
     (array([0, 1, 2, 3, 4, 5, 6]), array([7]), array([8, 9]),
      array([10, 11, 12, 13, 14, 15, 16]), array([17]), array([18, 19]))
-    
+
     """
     assert train_size + val_size + test_size == 1, "The splits should sum to 1"
 
@@ -1662,21 +1669,21 @@ def safe_normalize(data, mean, std):
     """
     Avoid division by zero by setting std to 1 for constant data
     Arguments:
-    - data (array): The dataset to be normalized. 
+    - data (array): The dataset to be normalized.
     - mean (float): The mean value of the training dataset.
-    - std (float): The standard deviation of the training dataset. 
+    - std (float): The standard deviation of the training dataset.
 
     Returns:
     - normalized_data (array): The normalized dataset.
 
     Example:
-    >>> data = np.array([10, 10, 10])  
-    >>> mean = np.mean(data)           
-    >>> std = np.std(data)             
+    >>> data = np.array([10, 10, 10])
+    >>> mean = np.mean(data)
+    >>> std = np.std(data)
     >>> normalized_data = safe_normalize(data, mean, std)
 
     """
-    std = np.where(std == 0, 1, std)  
+    std = np.where(std == 0, 1, std)
     return (data - mean) / std
 
 
@@ -1696,7 +1703,7 @@ def create_TDNN(hidden_units, lr):
     Example:
     >>> model = create_TDNN(hidden_units=128, lr=0.001)
     >>> model.summary()
-    
+
     """
     model = Sequential()
     model.add(Dense(hidden_units, activation='relu'))
@@ -1727,7 +1734,7 @@ def training_TDNN(TDNN_model, x_train, y_train, x_val, y_val, epochs):
     Example:
     >>> loss_val = training_TDNN(model, x_train, y_train, x_val, y_val, epochs=50)
     >>> print(f"Validation loss: {loss_val}")
-    
+
     """
     history = TDNN_model.fit(
         x_train, y_train, epochs=epochs, validation_data=(x_val, y_val), verbose=0
@@ -1756,7 +1763,7 @@ def objective_TDNN(trial, time_series):
     >>> study = optuna.create_study(direction='minimize')
     >>> study.optimize(lambda trial: objective_TDNN(trial, time_series), n_trials=100)
     >>> print(study.best_trial)
-    
+
     """
     # Set hyperparameters ranges
     tau = trial.suggest_categorical("tau", [8, 15, 22])
@@ -1813,7 +1820,7 @@ def tdnn_forecasting_training(series, n_trials=10):
     Arguments:
         - series (DataFrame): A time series dataframe with a 'time' column and one of the feature columns ('min', 'max', 'sum', or 'avg').
         - n_trials (int, optional): Number of trials for Optuna's hyperparameter search. Default is 10.
-    
+
     Returns:
         - best_model_TDNN (keras.Sequential): The TDNN model trained with the best hyperparameters.
         - best_params (dict): A dictionary containing the best hyperparameters ('tau', 'lr', 'epochs', 'hidden_units').
@@ -1826,7 +1833,7 @@ def tdnn_forecasting_training(series, n_trials=10):
             }
         >>> df = pd.DataFrame(data)
         >>> best_model, best_params, stats = tdnn_forecasting_training(df, n_trials=10)
-    
+
     """
     # Extract only column associated to one of ['min', 'max', 'sum', 'avg']
     time_series = series.iloc[:, 1]
@@ -1910,7 +1917,7 @@ def tdnn_forecasting_prediction(
 ):
     """
     Uses a trained TDNN model to forecast future values in a time series.
-    
+
     Arguments:
     - model: The trained TDNN model.
     - tau (int): The length of the input sliding window used for the TDNN model.
@@ -1918,7 +1925,7 @@ def tdnn_forecasting_prediction(
     - stats (list): A list containing normalization statistics (x_mean, x_std, y_mean, y_std).
     - timestamp_init (str, optional): The start date for the forecast. Defaults to the day after the last timestamp in the input data.
     - timestamp_end (str, optional): The end date for the forecast. Defaults to 7 days after timestamp_init.
-    
+
     Returns:
         - predictions_df (DataFrame): A DataFrame containing two columns: 'time' (forecast timestamps) and the predicted values for the specified feature.
 

@@ -10,7 +10,6 @@ class MailSender:
     This because all this informations cannot be stored in the class, for security reasons.
     Note: only works with Libero Mail.
     """
-
     def __init__(self, mail: str = None, password: str = None, recipient: str = None):
         """
         Initializes the MailSender object.

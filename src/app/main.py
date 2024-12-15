@@ -103,7 +103,7 @@ async def real_time_streaming_start(kpi_streaming_request: KPIStreamingRequest):
 
 async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
     global stop_event
-    i = 0
+    # i = 0
 
     try:
         kpi_validator = KPIValidator.from_streaming_request(kpi_streaming_request)
@@ -113,16 +113,16 @@ async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
 
     accumulated_data = {kpi: ("", []) for kpi in kpi_validator.kpis}
 
-    iterator = get_next_datapoint()
+    iterator = get_next_datapoint(kpi_validator)
 
     while not stop_event.is_set():
         try:
             # Fetch and process the data point
             raw_data = next(iterator)
-            cleaned_data = cleaning_pipeline(raw_data)
+            cleaned_data = cleaning_pipeline(raw_data, send_alerts=False)
 
             if cleaned_data is None:
-                print(f"Data point {i} could not be fetched. Skipping...")
+                print(f"Data point could not be fetched. Skipping...")
                 continue
 
             kpi_name = cleaned_data["kpi"]
@@ -148,13 +148,14 @@ async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
                     publisher._topic, json.dumps(message).encode("utf-8")
                 )
 
+                await asyncio.sleep(1)
+
         except Exception as e:
             print(f"Error in loop: {e}")
             stop_event.set()
             break
 
-        i = (i + 1) % BATCH_SIZE
-        await asyncio.sleep(0.1)
+        # i = (i + 1) % BATCH_SIZE
 
     print("Exiting KPI streaming loop.")
 
