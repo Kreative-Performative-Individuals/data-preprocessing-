@@ -33,6 +33,8 @@ class MailSender:
             self.recipient = input("Enter the recipient's email: ")
         else:
             self.recipient = recipient
+        self.anomaly_sent = False
+        self.broken_sent = False
 
     def send_mail(self, subject: str, body: str) -> bool:
         """
@@ -43,6 +45,12 @@ class MailSender:
         Returns:
             bool: True if the email was sent successfully, False otherwise.
         """
+        if self.anomaly_sent and "anomaly" in subject:
+            print("Anomaly email already sent.")
+            return False
+        if self.broken_sent and "malfunctioning" in subject:
+            print("Malfunctioning email already sent.")
+            return False
         msg = MIMEMultipart()
         msg["From"] = self.mail
         msg["To"] = self.recipient
@@ -57,6 +65,10 @@ class MailSender:
             server.sendmail(self.mail, self.recipient, msg.as_string())
             print("Email sent successfully!")
             success = True
+            if "anomaly" in subject:
+                self.anomaly_sent = True
+            elif "malfunctioning" in subject:
+                self.broken_sent = True
         except Exception as e:
             print(f"Error: {e}")
         finally:
