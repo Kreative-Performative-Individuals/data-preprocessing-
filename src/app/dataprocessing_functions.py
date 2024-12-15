@@ -1658,6 +1658,28 @@ def split_data(x_data, y_data, train_size=0.8, val_size=0.1, test_size=0.1):
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
+def safe_normalize(data, mean, std):
+    """
+    Avoid division by zero by setting std to 1 for constant data
+    Arguments:
+    - data (array): The dataset to be normalized. 
+    - mean (float): The mean value of the training dataset.
+    - std (float): The standard deviation of the training dataset. 
+
+    Returns:
+    - normalized_data (array): The normalized dataset.
+
+    Example:
+    >>> data = np.array([10, 10, 10])  
+    >>> mean = np.mean(data)           
+    >>> std = np.std(data)             
+    >>> normalized_data = safe_normalize(data, mean, std)
+
+    """
+    std = np.where(std == 0, 1, std)  
+    return (data - mean) / std
+
+
 def create_TDNN(hidden_units, lr):
     """
     Create a Time-Delay Neural Network (TDNN) model.
@@ -1761,10 +1783,11 @@ def objective_TDNN(trial, time_series):
     y_std = np.std(y_train)
 
     # Normalize training and test data with mean and variance of the training
-    x_train = (x_train - x_mean) / x_std
-    x_val = (x_val - x_mean) / x_std
-    y_train = (y_train - y_mean) / y_std
-    y_val = (y_val - y_mean) / y_std
+    x_train = safe_normalize(x_train, x_mean, x_std)
+    x_val = safe_normalize(x_val, x_mean, x_std)
+    y_train = safe_normalize(y_train, y_mean, y_std)
+    y_val = safe_normalize(y_val, y_mean, y_std)
+
 
     # Reshape the input data to (1, num_sequences, tau)
     x_train = np.expand_dims(x_train, axis=0)  # Shape (1, num_sequences, tau)
@@ -1839,10 +1862,10 @@ def tdnn_forecasting_training(series, n_trials=10):
     stats = np.array([x_mean, x_std, y_mean, y_std])
 
     # Normalize training and test data with training stats
-    x_training = (x_training - x_mean) / x_std
-    x_test = (x_test - x_mean) / x_std
-    y_training = (y_training - y_mean) / y_std
-    y_test = (y_test - y_mean) / y_std
+    x_training = safe_normalize(x_training, x_mean, x_std)
+    x_test = safe_normalize(x_test, x_mean, x_std)
+    y_training = safe_normalize(y_training, y_mean, y_std)
+    y_test = safe_normalize(y_test, y_mean, y_std)
 
     # Reshape input data to (1, num_sequences, tau)
     x_training = np.expand_dims(x_training, axis=0)  # Shape (1, num_sequences, tau)
