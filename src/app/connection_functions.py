@@ -67,10 +67,11 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
      "kpi_name": kpi,
      "machines ": machine_name,
      "operations": operation,
-     "asset_id": asset_id}
+     "asset_id": asset_id,
+     "column_name": ""}
 
      # Send the GET request
-     response = requests.get(url_db + "get_data_for_preprocessing", params=params)
+     response = requests.get(url_db + "get_real_time_data", params=params)
      print(response)
 
      return response
