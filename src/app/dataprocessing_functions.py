@@ -18,11 +18,11 @@ from keras.optimizers import Adam
 from keras.models import model_from_json
 from river import drift
 import optuna
-from src.app.connection_functions import send_alert, store_datapoint
+from connection_functions import send_alert, store_datapoint
 import pickle
 import dill
 import os
-import src.app.config as config
+import config as config
 import matplotlib.pyplot as plt
 
 ''''
@@ -920,8 +920,13 @@ def ad_exp_train(historical_data):
     - explainer (obj): the LIME explainer object.
     '''
     # consider using a tree explainer
+    train_set = pd.DataFrame(historical_data)[features]
+    nan_columns = train_set.columns[train_set.isna().all()]
+    train_set = train_set.drop(columns=nan_columns)
+    train_set = train_set.fillna(0)
+
     explainer = LimeTabularExplainer(
-        historical_data[features].values, 
+        train_set.values, 
         mode='classification', 
         feature_names=features,
         class_names=['Normal', 'Anomaly']
