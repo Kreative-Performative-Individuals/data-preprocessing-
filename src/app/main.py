@@ -60,16 +60,16 @@ def root():
 
 @app.get("/get_request")
 def get_request_callback(
-    machine_name: str = Query(..., description="Name of the machine"),
-    asset_id: str = Query(..., description="ID of the asset"),
-    kpi: str = Query(..., description="Key Performance Indicator"),
-    operation: str = Query(..., description="Type of operation"),
-    timestamp_start: datetime = Query(..., description="Start timestamp in ISO format"),
-    timestamp_end: datetime = Query(..., description="End timestamp in ISO format"),
-    transformation: Optional[str] = Query(
-        None, description="Transformation type (e.g., 'S', 'T')"
-    ),
-    forecasting: bool = Query(False, description="Enable forecasting (true/false)"),
+        machine_name: str = Query(..., description="Name of the machine"),
+        asset_id: str = Query(..., description="ID of the asset"),
+        kpi: str = Query(..., description="Key Performance Indicator"),
+        operation: str = Query(..., description="Type of operation"),
+        timestamp_start: datetime = Query(..., description="Start timestamp in ISO format"),
+        timestamp_end: datetime = Query(..., description="End timestamp in ISO format"),
+        transformation: Optional[str] = Query(
+            None, description="Transformation type (e.g., 'S', 'T')"
+        ),
+        forecasting: bool = Query(False, description="Enable forecasting (true/false)"),
 ):
     try:
         json_transformed_data = get_request(
@@ -95,15 +95,80 @@ async def real_time_streaming_start(kpi_streaming_request: KPIStreamingRequest):
 
     stop_event.clear()
     await asyncio.sleep(1)
-    # Get the current running event loop and create the task inside it
-    background_task = asyncio.create_task(send_kpis(kpi_streaming_request))
+
+    if kpi_streaming_request.special:
+        background_task = asyncio.create_task(send_kpis(kpi_streaming_request))
+    else:
+        background_task = asyncio.create_task(send_special_kpis(kpi_streaming_request))
 
     return {"message": "Background task started!"}
 
 
+async def send_special_kpis(kpi_streaming_request: KPIStreamingRequest):
+    global stop_event
+
+    try:
+        kpi_validator = KPIValidator.from_streaming_request(kpi_streaming_request)
+    except Exception as e:
+        print(f"Error initializing KPIValidator: {e}")
+        return
+
+    if not kpi_validator.check_special_request_validity():
+        print("Invalid special request. No 1:1 mapping between KPIs and operations. Exiting...")
+        return
+
+    # { kpi: (aggregation_column, [values], operation) }. One value for each machine - single operation pairs
+    accumulated_data = {kpi + "_" + operation: ("", []) for kpi, operation in
+                        zip(kpi_validator.kpis, kpi_validator.operations)}
+
+    iterator = get_next_datapoint(kpi_validator)
+
+    while not stop_event.is_set():
+        try:
+            # Fetch and process the data point
+            raw_data = next(iterator)
+            cleaned_data = cleaning_pipeline(raw_data, send_alerts=False)
+
+            if cleaned_data is None:
+                print(f"Data point could not be fetched. Skipping...")
+                continue
+
+            kpi_name = cleaned_data["kpi"]
+            if kpi_validator.validate(cleaned_data):
+                aggregation_column = kpi_validator.get_aggregation_from_kpi(kpi_name)
+                operation = cleaned_data["operation"]
+                key = kpi_name + "_" + operation
+                accumulated_data[key] = (
+                    aggregation_column,
+                    accumulated_data[kpi_name][1] + [cleaned_data[aggregation_column]],
+                )
+
+            # Check readiness of all KPIs
+            if all(
+                len(values) == kpi_validator.machine_count
+                for (_, values) in accumulated_data.values()
+            ):
+                message = []
+                for full_key, (column, values) in accumulated_data.items():
+                    kpi, operation = full_key.split("_")
+                    message.append(RealTimeKPI(kpi, column, values, operation).to_json())
+                    accumulated_data[full_key] = ("", [])
+                await publisher.aioproducer.send_and_wait(
+                    publisher._topic, json.dumps(message).encode("utf-8")
+                )
+
+                await asyncio.sleep(1)
+
+        except Exception as e:
+            print(f"Error in loop: {e}")
+            stop_event.set()
+            break
+
+    print("Exiting KPI streaming loop.")
+
+
 async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
     global stop_event
-    # i = 0
 
     try:
         kpi_validator = KPIValidator.from_streaming_request(kpi_streaming_request)
@@ -135,11 +200,11 @@ async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
 
             # Check readiness of all KPIs
             if all(
-                len(data[1]) == kpi_validator.machine_count
-                for data in accumulated_data.values()
+                    len(data[1]) == kpi_validator.machine_count
+                    for data in accumulated_data.values()
             ):
                 message = [
-                    RealTimeKPI(kpi, column, values).to_json()
+                    RealTimeKPI(kpi, column, values, "").to_json()
                     for kpi, (column, values) in accumulated_data.items()
                 ]
                 for kpi in accumulated_data.keys():
@@ -154,8 +219,6 @@ async def send_kpis(kpi_streaming_request: KPIStreamingRequest):
             print(f"Error in loop: {e}")
             stop_event.set()
             break
-
-        # i = (i + 1) % BATCH_SIZE
 
     print("Exiting KPI streaming loop.")
 

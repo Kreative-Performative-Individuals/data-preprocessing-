@@ -9,6 +9,7 @@ class KPIStreamingRequest(BaseModel):
     kpis: list[str]  # lis of all kpis
     machines: list[str]  # list of all machines
     operations: list[str]  # list of all operations
+    special: bool
 
 
 class KPIValidator:
@@ -26,6 +27,9 @@ class KPIValidator:
             machines=kpi_streaming_request.machines,
             operations=kpi_streaming_request.operations,
         )
+
+    def check_special_request_validity(self):
+        return self.kpi_count == len(self.operations)
 
     def validate(self, cleaned_data: dict):
         kpi = cleaned_data.get("kpi", None)
