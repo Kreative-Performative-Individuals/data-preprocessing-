@@ -1,4 +1,4 @@
-import config 
+import src.app.config as config
 import json
 
 # Original machine dictionary
