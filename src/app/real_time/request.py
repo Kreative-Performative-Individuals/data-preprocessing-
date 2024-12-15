@@ -14,7 +14,9 @@ class KPIStreamingRequest(BaseModel):
 
 class KPIValidator:
     def __init__(self, kpis: list[str], machines: list[str], operations: list[str]):
-        self.kpis = dict([re.split(r"_(?=[^_]*$)", kpi) for kpi in kpis])
+        split_kpis = [re.split(r"_(?=[^_]*$)", kpi) for kpi in kpis]
+        self.kpis = [item[0] for item in split_kpis]
+        self.aggregations = [item[1] for item in split_kpis]
         self.machines = machines
         self.operations = operations
         self.kpi_count = len(kpis)
@@ -41,14 +43,14 @@ class KPIValidator:
             return False
 
         return (
-            kpi in self.kpis.keys()
+            kpi in self.kpis
             and machine in self.machines
             and operation in self.operations
             and cleaned_data[self.get_aggregation_from_kpi(kpi)] is not None
         )
 
     def get_aggregation_from_kpi(self, kpi: str):
-        return self.kpis[kpi]
+        return self.aggregations[self.kpis.index(kpi)]
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, indent=4)

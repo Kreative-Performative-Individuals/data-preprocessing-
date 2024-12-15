@@ -94,12 +94,11 @@ async def real_time_streaming_start(kpi_streaming_request: KPIStreamingRequest):
         return {"message": "Task is already running!"}
 
     stop_event.clear()
-    await asyncio.sleep(1)
 
     if kpi_streaming_request.special:
-        background_task = asyncio.create_task(send_kpis(kpi_streaming_request))
-    else:
         background_task = asyncio.create_task(send_special_kpis(kpi_streaming_request))
+    else:
+        background_task = asyncio.create_task(send_kpis(kpi_streaming_request))
 
     return {"message": "Background task started!"}
 
@@ -133,20 +132,20 @@ async def send_special_kpis(kpi_streaming_request: KPIStreamingRequest):
                 print(f"Data point could not be fetched. Skipping...")
                 continue
 
-            kpi_name = cleaned_data["kpi"]
             if kpi_validator.validate(cleaned_data):
-                aggregation_column = kpi_validator.get_aggregation_from_kpi(kpi_name)
+                kpi_name = cleaned_data["kpi"]
                 operation = cleaned_data["operation"]
                 key = kpi_name + "_" + operation
+                aggregation_column = kpi_validator.get_aggregation_from_kpi(kpi_name)
                 accumulated_data[key] = (
                     aggregation_column,
-                    accumulated_data[kpi_name][1] + [cleaned_data[aggregation_column]],
+                    accumulated_data[key][1] + [cleaned_data[aggregation_column]],
                 )
 
             # Check readiness of all KPIs
             if all(
-                len(values) == kpi_validator.machine_count
-                for (_, values) in accumulated_data.values()
+                    len(values) == kpi_validator.machine_count
+                    for (_, values) in accumulated_data.values()
             ):
                 message = []
                 for full_key, (column, values) in accumulated_data.items():
