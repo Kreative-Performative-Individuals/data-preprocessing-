@@ -1,8 +1,8 @@
 import json
 import pandas as pd
-import config as config
+import src.app.config as config
 from datetime import timedelta
-from notification.mail_sender import MailSender
+from src.app.notification.mail_sender import MailSender
 
 
 def get_datapoint(i):

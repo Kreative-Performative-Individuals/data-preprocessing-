@@ -50,72 +50,74 @@ with open(config.HISTORICAL_DATA_PATH, "w") as file:
 
 # ''''Fill the batches of each feature for each kpi and machine. 
 # Train the anomaly detector for each machine and kpi over the 200 days considered for historical data ''''
-for m in [list(machines.keys())][0]:
+for m in list(machines.keys()):
     a = machines[m] 
-    for k in [list(kpi.keys())][0]:
-        for o in [kpi[k][1]][0]:
+    for k in list(kpi.keys()):
+        for o in kpi[k][1]:
             print(f'combination: {m} - {a} - {k} - {o}')
+            if k=='emission_factor':
+                continue
             section=historical[(historical['name']==m)&(historical['asset_id']==a)&(historical['kpi']==k)&(historical['operation']==o)&(historical['status']!='Corrupted')]
             with open(config.STORE_PKL, "rb") as file:
                 info = pickle.load(file)
             
             
-            # #here there's an error
-            # for f in features:
-            #     info[m][a][k][o][0][features.index(f)]=section[f].iloc[-40:].to_list()
+            #here there's an error
+            for f in features:
+                info[m][a][k][o][0][features.index(f)]=section[f].iloc[-40:].to_list()
 
             
-            # with open(config.STORE_PKL, "wb") as file:
-            #     pickle.dump(info, file)
+            with open(config.STORE_PKL, "wb") as file:
+                pickle.dump(info, file)
             
-            # nan_columns = section.columns[section.isna().all()]
+            nan_columns = section.columns[section.isna().all()]
             
-            # length=30
-            # train_set=section[features].iloc[-length:].reset_index(drop=True)
-            # train_set = train_set.drop(columns=nan_columns)
-            # train_set=train_set.fillna(0)
-            # s=[]
-            # cc=np.arange(0.01, 0.5, 0.01)
-            # for c in cc:
-            #     model = IsolationForest(n_estimators=200, contamination=c)
-            #     an_pred=model.fit_predict(train_set)
-            #     if len(set(an_pred)) > 1:  # Check for multiple clusters
-            #         s.append(silhouette_score(train_set, an_pred))
-            #     else:
-            #         s.append(-1)  # Append a placeholder or ignore this case
-            # if max(s)<=0.75:
-            #     optimal_c=1e-5
-            # else:
-            #     optimal_c=cc[np.argmax(s)]
-            # model = IsolationForest(n_estimators=200, contamination=optimal_c)
-            # explainer = LimeTabularExplainer(
-            #     train_set.values, 
-            #     mode='classification', 
-            #     feature_names=features,
-            #     class_names=['Normal', 'Anomaly']
-            #     )
+            length=30
+            train_set=section[features].iloc[-length:].reset_index(drop=True)
+            train_set = train_set.drop(columns=nan_columns)
+            train_set=train_set.fillna(0)
+            s=[]
+            cc=np.arange(0.01, 0.5, 0.01)
+            for c in cc:
+                model = IsolationForest(n_estimators=200, contamination=c)
+                an_pred=model.fit_predict(train_set)
+                if len(set(an_pred)) > 1:  # Check for multiple clusters
+                    s.append(silhouette_score(train_set, an_pred))
+                else:
+                    s.append(-1)  # Append a placeholder or ignore this case
+            if max(s)<=0.75:
+                optimal_c=1e-5
+            else:
+                optimal_c=cc[np.argmax(s)]
+            model = IsolationForest(n_estimators=200, contamination=optimal_c)
+            explainer = LimeTabularExplainer(
+                train_set.values, 
+                mode='classification', 
+                feature_names=features,
+                class_names=['Normal', 'Anomaly']
+                )
             
-            # update_model_ad(section.iloc[0].to_dict(), model)
-            # update_model_ad_exp(section.iloc[0].to_dict(), explainer)
+            update_model_ad(section.iloc[0].to_dict(), model)
+            update_model_ad_exp(section.iloc[0].to_dict(), explainer)
             
-            # predictions = model.fit_predict(train_set)
-            # predictions= np.vstack([train_set.index, predictions])
-            # marker_indices = predictions[0, predictions[1] == -1]  # First row corresponding to -1 in second row
-            # plt.figure(figsize=(10, 6)) 
-            # for f in train_set.columns:
-            #     plt.plot(train_set.index, train_set[f], label=f)
-            #     plt.scatter(marker_indices, train_set[f].iloc[marker_indices], color="red", label="Anomalies")
+            predictions = model.fit_predict(train_set)
+            predictions= np.vstack([train_set.index, predictions])
+            marker_indices = predictions[0, predictions[1] == -1]  # First row corresponding to -1 in second row
+            plt.figure(figsize=(10, 6)) 
+            for f in train_set.columns:
+                plt.plot(train_set.index, train_set[f], label=f)
+                plt.scatter(marker_indices, train_set[f].iloc[marker_indices], color="red", label="Anomalies")
                 
-            # plt.title('Train set')
-            # plt.xlabel('Time')
-            # plt.ylabel('Value')
-            # plt.legend()
-            # plt.tight_layout()
-            # output_dir = "anomaly_training"
-            # os.makedirs(output_dir, exist_ok=True)
-            # save_path = os.path.join(output_dir, f"{m}_{a}_{k}_{o}.png")
-            # plt.savefig(save_path)
-            # plt.close()
+            plt.title('Train set')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.tight_layout()
+            output_dir = "anomaly_training"
+            os.makedirs(output_dir, exist_ok=True)
+            save_path = os.path.join(output_dir, f"{m}_{a}_{k}_{o}.png")
+            plt.savefig(save_path)
+            plt.close()
             
             model_forecasting={}
             for f in features:

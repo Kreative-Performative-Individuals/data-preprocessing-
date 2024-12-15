@@ -18,11 +18,11 @@ from keras.optimizers import Adam
 from keras.models import model_from_json
 from river import drift
 import optuna
-from connection_functions import send_alert, store_datapoint
+from src.app.connection_functions import send_alert, store_datapoint
 import pickle
 import dill
 import os
-import config as config
+import src.app.config as config
 import matplotlib.pyplot as plt
 
 ''''
@@ -1732,11 +1732,11 @@ def training_TDNN(TDNN_model, x_train, y_train, x_val, y_val, epochs):
     history = TDNN_model.fit(
         x_train, y_train, epochs=epochs, validation_data=(x_val, y_val), verbose=0
     )
-    print(history.history.keys())
+    #print(history.history.keys())
     loss_training = history.history["loss"]
-    print("Loss training: ", loss_training[-1])
+    #print("Loss training: ", loss_training[-1])
     loss_validation = history.history["val_loss"]
-    print("Loss validation: ", loss_validation[-1])
+    #print("Loss validation: ", loss_validation[-1])
     return loss_validation[-1]
 
 
@@ -1885,7 +1885,7 @@ def tdnn_forecasting_training(series, n_trials=10):
 
     # calculate MSE
     TDNN_test_MSE = best_model_TDNN.evaluate(x_test, y_test)
-    print("Test MSE: ", TDNN_test_MSE)
+    #print("Test MSE: ", TDNN_test_MSE)
 
     # Denormalize predictions and targets for plotting
     y_pred_training = y_pred_training * y_std + y_mean
