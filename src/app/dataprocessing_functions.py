@@ -864,6 +864,27 @@ preprocessing pipeline, including a brief description of their inputs, outputs a
 
 
 def ad_train(historical_data):
+    """
+    Trains an anomaly detection model using Isolation Forest on historical data.
+    The training consists in optimizing the contamination parameter using the Silhouette Score to balance cluster separation
+    between the detected normal class and the anomaly class. If no acceptable Silhouette Score (> 0.70) is found, 
+    the contamination is set to a very low value (1e-5) since it means that no anomaly is present in the train set.
+    Features with all `NaN` values are excluded, and residual missing values are imputed with zeros to ensure proper working. 
+    
+
+    Arguments:
+    - historical_data (DataFrame): a dataset containing historical feature values. Each row represents a data point, and columns correspond to features.
+    Missing values are handled but data should be cleaned first to ensure valuable training.
+
+    Returns:
+    - model (obj): IsolationForest trained model.
+
+    Example:
+        >>> model = ad_train(historical_data)
+        >>> print(model)
+        IsolationForest(contamination=0.11, n_estimators=200)  # Example output
+    """
+
     # account also for the case in which one feature may not be definable for a kpi
 
     train_set = pd.DataFrame(historical_data)[features]
@@ -909,6 +930,23 @@ def ad_exp_train(historical_data):
 
 
 def ad_predict(x, model):
+    """
+    Predicts the anomaly status ('Anomaly' or 'Normal') of a datapoint using a trained Isolation Forest model.
+    It calculates the anomaly probability based on the model's decision function.
+
+    Arguments:
+    - x (dict): single datapoint.
+    - model (obj): the last trained model of Isolation Forest.
+
+    Returns:
+    - x (dict): the original datapoint enriched of the new field 'status': 'Anomaly/Normal'. 
+    - `anomaly_prob` (int): The anomaly probability as a percentage (0–100).
+
+    Example:
+        >>> status, prob = ad_predict(datapoint, model)
+        >>> print(status, prob)
+        Normal 85  # Example output
+    """
     # account for the case in which one feature may be nan also after the imputation since the feature is not definable for that kpi.
     dp = pd.DataFrame.from_dict(x, orient="index").T
     dp = dp[features]
@@ -964,15 +1002,6 @@ ________________________________________________________________________________
 """ In this code we stored the functions that were used in the feature engineering section of the
 preprocessing pipeline, including a brief description of their inputs, outputs and functioning"""
 
-# THIS IS THE MAIN FUNCTION FOR THE FEATURE ENGINEERING
-# The input dataframe corresponds to a filtrate version of the dataset for a given machine, kpi and
-# operation, so it contains 9-10  columns (depending on the presence ['sum', 'avg','min', 'max', 'var'])
-# and the amount of entries correspondent to the selected time range.
-# It also take kwargs as a parameter, which recall the information about how to set the time serie in
-# order to have a proper input for the machine learning algortithms.
-# It performs several operations on the time series, depending on the kwargs, such as  make_stationary, detrend,
-# deseasonalize, get_residuals, scaler.
-# It gives as an output the transformed time serie.
 
 
 def feature_engineering_pipeline(dataframe, kwargs):

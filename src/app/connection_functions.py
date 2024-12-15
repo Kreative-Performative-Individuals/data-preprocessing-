@@ -1,11 +1,29 @@
 import json
 import pandas as pd
-import config as config
+import src.app.config as config
 from datetime import timedelta
-from notification.mail_sender import MailSender
+from src.app.notification.mail_sender import MailSender
 
 
 def get_datapoint(i):
+    """
+    Retrieves a specific datapoint from the dataset 'original_adapted_dataset.json' in \data.
+    The stream is assumed to start from 16/09/2024, thus from index 38,400 onwards.
+
+    Arguments:
+    - i (int): The index of the desired datapoint within the truncated data stream.
+
+    Returns:
+    - datapoint (dict): the new datapoint of the stream.
+
+    Example:
+        >>> i = 5
+        >>> datapoint = get_datapoint(i)
+        >>> print(datapoint)
+        {'time': '2024-09-17 00:00:00+00:00', 'asset_id': 'ast-o8xtn5xa8y87', 'name': 'Riveting Machine', 'kpi': 'average_cycle_time', 'operation': 'working', 
+        'sum': nan, 'avg': 1.8807104020608367, 'min': 1.658396446642954, 'max': 1.9876466725348092, 'var': nan, 'status': nan} # Example output
+    """
+
     with open(config.ORIGINAL_ADAPTED_DATA_PATH, "r") as file:
         stream = json.load(file)
 
@@ -85,6 +103,22 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start,
 def send_alert(identity, type, counter=None, probability=None): #the identity returns the type of Kpi and machine for which the anomaly/nan values
                                         # have been detected, type is 'Anomaly' or 'Nan', counter (is the number of consecutive days in
                                         # which we have detected nan) is None if type = 'Anomaly'
+    
+    """
+    Sends an email alert for detected anomalies or persistent NaN values in a machine's KPI.
+
+    Arguments:
+    - identity (dict): Details about the machine and KPI, including:
+        - `name`, `asset_id`, `kpi`, `operation` (all required).
+        - `explanation`: Required for anomalies.
+    - type (str): Type of issue detected ('Anomaly' or 'Nan').
+    - counter (int, optional): Consecutive days with NaN values (required if `type == 'Nan'`).
+    - probability (int, optional): Anomaly probability in percentage (required if `type == 'Anomaly'`).
+
+    Returns:
+    - None
+    """
+
     if type == 'Anomaly':
         object='Anomaly alert'
         alert = f"Alert anomaly in machine: '{identity['name']}' - asset: '{identity['asset_id']}' - kpi: '{identity['kpi']}' - operation: '{identity['operation']}'! The probability that this anomaly is correct is {probability}%.\n\n{identity['explanation']}"
@@ -97,6 +131,15 @@ def send_alert(identity, type, counter=None, probability=None): #the identity re
 
 
 def store_datapoint(new_datapoint):
+    """
+    Stores a new datapoint in both the current and historical data files.
+
+    Arguments:
+    - new_datapoint (dict): The new datapoint to be stored.
+
+    Returns:
+    - None
+    """
 
     with open(config.NEW_DATAPOINT_PATH, "w") as json_file:
         json.dump(new_datapoint, json_file, indent=1) 
