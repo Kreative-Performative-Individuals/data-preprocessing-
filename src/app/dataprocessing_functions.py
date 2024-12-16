@@ -926,16 +926,20 @@ def ad_exp_train(historical_data):
     Returns:
     - explainer (obj): the LIME explainer object.
     '''
-    # consider using a tree explainer
-    train_set = pd.DataFrame(historical_data)[features]
+    train_set = pd.DataFrame(historical_data)
     nan_columns = train_set.columns[train_set.isna().all()]
     train_set = train_set.drop(columns=nan_columns)
+    try:
+        train_set = train_set.drop(columns=['time', 'asset_id', 'name', 'kpi', 'operation', 'status'])
+    except KeyError:
+        # columns were already removed
+        pass
     train_set = train_set.fillna(0)
 
     explainer = LimeTabularExplainer(
         train_set.values,
         mode='classification',
-        feature_names=features,
+        feature_names=['sum', 'avg', 'min', 'max'],
         class_names=['Normal', 'Anomaly']
         )
     return explainer
@@ -989,12 +993,19 @@ def ad_exp_predict(x, explainer, model):
     - readable_output (str): The explanation for the data point (in a human readable way).
     '''
     dp=pd.DataFrame.from_dict(x, orient="index").T
-    dp=dp[features]
+    dp=dp[['sum', 'avg', 'min', 'max']]
     dp=dp.fillna(0)
+    class_pred = lambda x: [0.01, 0.99] if model.predict([x])[0] == 1 else [0.99, 0.01]
+    def predict_list(x):
+        l = []
+        for element in x:
+            l.append(class_pred(element))
+        return np.array(l)
     explanation = explainer.explain_instance(
         dp.values[0],
-        model.predict,
-        top_labels=1
+        predict_list,
+        top_labels=1,
+        num_samples=200
     )
     # readable_output = "Feature Contributions to the Prediction:\n"
     # for feature, weight in explanation.as_list(label=explanation.top_labels[0]):
