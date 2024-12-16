@@ -77,7 +77,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
      return response
 
 
-'''def get_historical_data(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
+def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
     with open(config.HISTORICAL_DATA_PATH, "r") as file:
         historical = json.load(file)
     historical_data = pd.DataFrame(historical)
@@ -105,7 +105,7 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
     historical_data['time'] = historical_data['time'].astype(str)
 
     return historical_data
-'''
+
 
 def send_alert(identity, type, counter=None,
                probability=None):  #the identity returns the type of Kpi and machine for which the anomaly/nan values
