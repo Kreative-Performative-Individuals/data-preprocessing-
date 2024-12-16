@@ -7,15 +7,11 @@ import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from src.app import config
-from src.app.dataprocessing_functions import ad_train, cleaning_pipeline, ad_exp_train, ad_exp_predict, ad_predict
+from src.app.dataprocessing_functions import cleaning_pipeline, ad_exp_train, ad_exp_predict
 from src.app.connection_functions import get_datapoint, get_historical_data_mock
 from src.app.connection_functions import send_alert
 import pandas as pd
 from sklearn.ensemble import IsolationForest
-from lime.lime_tabular import LimeTabularExplainer
-import pickle
-import json
-import time
 
 c = 0
 new_datapoint = get_datapoint(c)  # CONNECTION WITH API
