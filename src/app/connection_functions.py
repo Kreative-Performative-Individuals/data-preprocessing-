@@ -77,34 +77,34 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
      return response
 
 
-# def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
-#     with open(config.HISTORICAL_DATA_PATH, "r") as file:
-#         historical = json.load(file)
-#     historical_data = pd.DataFrame(historical)
+def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
+    with open(config.HISTORICAL_DATA_PATH, "r") as file:
+        historical = json.load(file)
+    historical_data = pd.DataFrame(historical)
 
-#     historical_data = historical_data[
-#         (historical_data['name'] == machine_name) &
-#         (historical_data['asset_id'] == asset_id) &
-#         (historical_data['kpi'] == kpi) &
-#         (historical_data['operation'] == operation) &
-#         (historical_data['status'] != 'Corrupted')].reset_index(drop=True)
+    historical_data = historical_data[
+        (historical_data['name'] == machine_name) &
+        (historical_data['asset_id'] == asset_id) &
+        (historical_data['kpi'] == kpi) &
+        (historical_data['operation'] == operation) &
+        (historical_data['status'] != 'Corrupted')].reset_index(drop=True)
 
-#     historical_data['time'] = pd.to_datetime(historical_data['time'])
+    historical_data['time'] = pd.to_datetime(historical_data['time'])
 
-#     #here we are isolating the specific timeseries that we want by filtering the historical data we have stored.
-#     if timestamp_end == -1:
-#         timestamp_end = historical_data['time'].iloc[-1]
+    #here we are isolating the specific timeseries that we want by filtering the historical data we have stored.
+    if timestamp_end == -1:
+        timestamp_end = historical_data['time'].iloc[-1]
 
-#     if timestamp_start == -1:
-#         timestamp_start = timestamp_end - timedelta(days=100)
+    if timestamp_start == -1:
+        timestamp_start = timestamp_end - timedelta(days=100)
 
-#     historical_data = historical_data[
-#         (historical_data['time'] >= timestamp_start) &
-#         (historical_data['time'] <= timestamp_end)]
+    historical_data = historical_data[
+        (historical_data['time'] >= timestamp_start) &
+        (historical_data['time'] <= timestamp_end)]
 
-#     historical_data['time'] = historical_data['time'].astype(str)
+    historical_data['time'] = historical_data['time'].astype(str)
 
-#     return historical_data
+    return historical_data
 
 
 def send_alert(identity, type, counter=None,
