@@ -7,6 +7,7 @@ from src.app.real_time.request import KPIStreamingRequest, KPIValidator
 import requests
 
 
+
 def get_datapoint(i):
     """
     Retrieves a specific datapoint from the dataset 'original_adapted_dataset.json' in \data.
@@ -54,27 +55,37 @@ def get_next_datapoint(kpi_validator: KPIValidator, file=config.CLEANED_PREDICTE
 
 
 def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, timestamp_end):
-     # In some manner receives data frame filtered from the database in format dataframe
-     #Maybe we can define that if we give timestap_start = None, timestamp_end = None,
-     #they have to return us x values in the past starting from the last stored point
     
+    """
+    This function calls the database to extract a filtered version of the dataset given the
+    requested parameters
+
+    :param machine_name: The requested machine
+    :param asset_id: The requested asset_id
+    :param kpi: The requested kpi
+    :param operation: The requested operation
+    :param timestap_start: The requested timestamp from where the time range begins
+    :param timestamp_end: The requested timestamp from where the time range ends
+    :return: The filtered dataframe
+    """
     
-     url_db = "http://localhost:8002/"
-     
-     params = {
-     "start_date": timestap_start,
-     "end_date": timestamp_end,
-     "kpi_name": kpi,
-     "machines ": machine_name,
-     "operations": operation,
-     "asset_id": asset_id,
-     "column_name": ""}
+    url_db = "http://localhost:8002/" 
+    
 
-     # Send the GET request
-     response = requests.get(url_db + "get_real_time_data", params=params)
-     print(response)
-
-     return response
+    params = { 
+    "start_date": timestap_start, 
+    "end_date": timestamp_end, 
+    "kpi_name": kpi, 
+    "column_name": "",
+    "machines": machine_name, 
+    "operations": operation, 
+    "asset_id": asset_id 
+    } 
+ 
+    # Send the GET request 
+    response = requests.get(url_db + "get_real_time_data", json=params) 
+ 
+    return response.json()["data"]
 
 
 def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
@@ -139,12 +150,13 @@ def send_alert(identity, type, counter=None,
 
 def store_datapoint(new_datapoint):
 
-    with open(config.NEW_DATAPOINT_PATH, "w") as json_file:
-        json.dump(new_datapoint, json_file, indent=1) 
-
-
     url_db = "http://localhost:8002/"
-    response = requests.post(url_db + "store_datapoint", params=new_datapoint)
+    try:
+        response = requests.post(f"{url_db}store_datapoint", json=new_datapoint)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.json()  # Return JSON response from the server
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to store data point: {e}"}
 
 
 

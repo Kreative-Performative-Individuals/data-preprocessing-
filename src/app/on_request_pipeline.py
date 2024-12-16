@@ -27,7 +27,7 @@ def get_request(
         # transformation_config['scaler'] = True
 
         historical_data = get_historical_data(
-            machine_name, asset_id, kpi, operation, -1, -1
+            machine_name, asset_id, kpi, operation, "", ""
         )  ## CONNECTION WITH API
 
         # transformed_data = feature_engineering_pipeline(historical_data, transformation_config)

@@ -26,7 +26,7 @@ while c < 10:
             if drift_flag:
                 print(f"Detected DRIFT")
                 historical_data = get_historical_data(cleaned_datapoint['name'], cleaned_datapoint['asset_id'],
-                                                      cleaned_datapoint['kpi'], cleaned_datapoint['operation'], -1,
+                                                      cleaned_datapoint['kpi'], cleaned_datapoint['operation'], "",
                                                       cleaned_datapoint['time'])  # CONNECTION WITH API
 
                 # retrain anomaly detection model
