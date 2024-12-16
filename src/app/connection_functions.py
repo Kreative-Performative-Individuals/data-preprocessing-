@@ -77,34 +77,34 @@ def get_historical_data(machine_name, asset_id, kpi, operation, timestap_start, 
      return response
 
 
-def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
-    with open(config.HISTORICAL_DATA_PATH, "r") as file:
-        historical = json.load(file)
-    historical_data = pd.DataFrame(historical)
+# def get_historical_data_mock(machine_name, asset_id, kpi, operation, timestamp_start, timestamp_end):
+#     with open(config.HISTORICAL_DATA_PATH, "r") as file:
+#         historical = json.load(file)
+#     historical_data = pd.DataFrame(historical)
 
-    historical_data = historical_data[
-        (historical_data['name'] == machine_name) &
-        (historical_data['asset_id'] == asset_id) &
-        (historical_data['kpi'] == kpi) &
-        (historical_data['operation'] == operation) &
-        (historical_data['status'] != 'Corrupted')].reset_index(drop=True)
+#     historical_data = historical_data[
+#         (historical_data['name'] == machine_name) &
+#         (historical_data['asset_id'] == asset_id) &
+#         (historical_data['kpi'] == kpi) &
+#         (historical_data['operation'] == operation) &
+#         (historical_data['status'] != 'Corrupted')].reset_index(drop=True)
 
-    historical_data['time'] = pd.to_datetime(historical_data['time'])
+#     historical_data['time'] = pd.to_datetime(historical_data['time'])
 
-    #here we are isolating the specific timeseries that we want by filtering the historical data we have stored.
-    if timestamp_end == -1:
-        timestamp_end = historical_data['time'].iloc[-1]
+#     #here we are isolating the specific timeseries that we want by filtering the historical data we have stored.
+#     if timestamp_end == -1:
+#         timestamp_end = historical_data['time'].iloc[-1]
 
-    if timestamp_start == -1:
-        timestamp_start = timestamp_end - timedelta(days=100)
+#     if timestamp_start == -1:
+#         timestamp_start = timestamp_end - timedelta(days=100)
 
-    historical_data = historical_data[
-        (historical_data['time'] >= timestamp_start) &
-        (historical_data['time'] <= timestamp_end)]
+#     historical_data = historical_data[
+#         (historical_data['time'] >= timestamp_start) &
+#         (historical_data['time'] <= timestamp_end)]
 
-    historical_data['time'] = historical_data['time'].astype(str)
+#     historical_data['time'] = historical_data['time'].astype(str)
 
-    return historical_data
+#     return historical_data
 
 
 def send_alert(identity, type, counter=None,
@@ -146,27 +146,27 @@ def store_datapoint(new_datapoint):
     url_db = "http://localhost:8002/"
     response = requests.post(url_db + "store_datapoint", params=new_datapoint)
 
-'''
 
-def store_datapoint(new_datapoint):
-    """
-    Stores a new datapoint in both the current and historical data files.
 
-    Arguments:
-    - new_datapoint (dict): The new datapoint to be stored.
+# def store_datapoint(new_datapoint):
+#     """
+#     Stores a new datapoint in both the current and historical data files.
 
-    Returns:
-    - None
-    """
+#     Arguments:
+#     - new_datapoint (dict): The new datapoint to be stored.
 
-    with open(config.NEW_DATAPOINT_PATH, "w") as json_file:
-        json.dump(new_datapoint, json_file, indent=1)
+#     Returns:
+#     - None
+#     """
 
-    with open(config.HISTORICAL_DATA_PATH, "r") as file:
-        historical = json.load(file)
-    historical = pd.DataFrame(historical)
-    historical = pd.concat([historical, pd.DataFrame([new_datapoint])], ignore_index=True)
+#     with open(config.NEW_DATAPOINT_PATH, "w") as json_file:
+#         json.dump(new_datapoint, json_file, indent=1)
 
-    with open(config.NEW_DATAPOINT_PATH, "w") as file:
-        json.dump(historical.to_dict(), file, indent=1)
-'''
+#     with open(config.HISTORICAL_DATA_PATH, "r") as file:
+#         historical = json.load(file)
+#     historical = pd.DataFrame(historical)
+#     historical = pd.concat([historical, pd.DataFrame([new_datapoint])], ignore_index=True)
+
+#     with open(config.NEW_DATAPOINT_PATH, "w") as file:
+#         json.dump(historical.to_dict(), file, indent=1)
+
