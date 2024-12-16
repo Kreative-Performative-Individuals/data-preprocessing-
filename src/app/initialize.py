@@ -58,13 +58,13 @@ for m in list(machines.keys()):
             if k=='emission_factor':
                 continue
             section=historical[(historical['name']==m)&(historical['asset_id']==a)&(historical['kpi']==k)&(historical['operation']==o)&(historical['status']!='Corrupted')]
-            # with open(config.STORE_PKL, "rb") as file:
-            #     info = pickle.load(file)
+            with open(config.STORE_PKL, "rb") as file:
+                info = pickle.load(file)
             
             
-            # #here there's an error
-            # for f in features:
-            #     info[m][a][k][o][0][features.index(f)]=section[f].iloc[-40:].to_list()
+            #here there's an error
+            for f in features:
+                info[m][a][k][o][0][features.index(f)]=section[f].iloc[-40:].to_list()
 
             
             nan_columns = section.columns[section.isna().all()]
@@ -73,75 +73,75 @@ for m in list(machines.keys()):
             train_set=section[features].iloc[-length:].reset_index(drop=True)
             train_set = train_set.drop(columns=nan_columns)
             train_set=train_set.fillna(0)
-            print(train_set.columns)
-    #         s=[]
-    #         cc=np.arange(0.01, 0.5, 0.01)
-    #         for c in cc:
-    #             model = IsolationForest(n_estimators=200, contamination=c)
-    #             an_pred=model.fit_predict(train_set)
-    #             if len(set(an_pred)) > 1:  # Check for multiple clusters
-    #                 s.append(silhouette_score(train_set, an_pred))
-    #             else:
-    #                 s.append(-1)  # Append a placeholder or ignore this case
-    #         if max(s)<=0.75:
-    #             optimal_c=1e-5
-    #         else:
-    #             optimal_c=cc[np.argmax(s)]
-    #         model = IsolationForest(n_estimators=200, contamination=optimal_c)
-    #         explainer = LimeTabularExplainer(
-    #             train_set.values, 
-    #             mode='classification', 
-    #             feature_names=train_set.columns,
-    #             class_names=['Normal', 'Anomaly']
-    #             )
+            s=[]
+            cc=np.arange(0.01, 0.5, 0.01)
+            for c in cc:
+                model = IsolationForest(n_estimators=200, contamination=c)
+                an_pred=model.fit_predict(train_set)
+                if len(set(an_pred)) > 1:  # Check for multiple clusters
+                    s.append(silhouette_score(train_set, an_pred))
+                else:
+                    s.append(-1)  # Append a placeholder or ignore this case
+            if max(s)<=0.75:
+                optimal_c=1e-5
+            else:
+                optimal_c=cc[np.argmax(s)]
+            model = IsolationForest(n_estimators=200, contamination=optimal_c)
+            model.fit_predict(train_set)
+            explainer = LimeTabularExplainer(
+                train_set.values, 
+                mode='classification', 
+                feature_names=train_set.columns,
+                class_names=['Normal', 'Anomaly']
+                )
 
-    #         info[m][a][k][o][2] = model
-    #         update_model_ad_exp(section.iloc[0].to_dict(), explainer)
+            info[m][a][k][o][2] = model
+            update_model_ad_exp(section.iloc[0].to_dict(), explainer)
             
-    #         predictions = model.fit_predict(train_set)
-    #         predictions= np.vstack([train_set.index, predictions])
-    #         marker_indices = predictions[0, predictions[1] == -1]  # First row corresponding to -1 in second row
-    #         plt.figure(figsize=(10, 6)) 
-    #         for f in train_set.columns:
-    #             plt.plot(train_set.index, train_set[f], label=f)
-    #             plt.scatter(marker_indices, train_set[f].iloc[marker_indices], color="red", label="Anomalies")
+            predictions = model.fit_predict(train_set)
+            predictions= np.vstack([train_set.index, predictions])
+            marker_indices = predictions[0, predictions[1] == -1]  # First row corresponding to -1 in second row
+            plt.figure(figsize=(10, 6)) 
+            for f in train_set.columns:
+                plt.plot(train_set.index, train_set[f], label=f)
+                plt.scatter(marker_indices, train_set[f].iloc[marker_indices], color="red", label="Anomalies")
                 
-    #         plt.title('Train set')
-    #         plt.xlabel('Time')
-    #         plt.ylabel('Value')
-    #         plt.legend()
-    #         plt.tight_layout()
-    #         output_dir = "anomaly_training"
-    #         os.makedirs(output_dir, exist_ok=True)
-    #         save_path = os.path.join(output_dir, f"{m}_{a}_{k}_{o}.png")
-    #         plt.savefig(save_path)
-    #         plt.close()
+            plt.title('Train set')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.tight_layout()
+            output_dir = "anomaly_training"
+            os.makedirs(output_dir, exist_ok=True)
+            save_path = os.path.join(output_dir, f"{m}_{a}_{k}_{o}.png")
+            plt.savefig(save_path)
+            plt.close()
             
-    #         model_forecasting={}
-    #         for f in features:
-    #             if all(pd.isna(section[f])):
-    #                 continue
-    #             else:
-    #                 train_set=section[['time'] + [f]]
-    #                 train_set=train_set.fillna(0)
-    #                 model=tdnn_forecasting_training(train_set)
-    #                 model_forecasting[f]=model
+            model_forecasting={}
+            for f in features:
+                if all(pd.isna(section[f])):
+                    continue
+                else:
+                    train_set=section[['time'] + [f]]
+                    train_set=train_set.fillna(0)
+                    model=tdnn_forecasting_training(train_set)
+                    model_forecasting[f]=model
             
-    #         complete_model={}
-    #         for feature, model_info in model_forecasting.items():
-    #             keras_model, best_params, stats = model_info
+            complete_model={}
+            for feature, model_info in model_forecasting.items():
+                keras_model, best_params, stats = model_info
 
-    #             # Store model data in the dictionary
-    #             complete_model[feature] = {
-    #                 "model_architecture": keras_model.to_json(),  # Store model architecture
-    #                 "model_weights": keras_model.get_weights(),  # Store model weights
-    #                 "params": best_params,  # Store best parameters
-    #                 "stats": stats,  # Store stats
-    #             }
+                # Store model data in the dictionary
+                complete_model[feature] = {
+                    "model_architecture": keras_model.to_json(),  # Store model architecture
+                    "model_weights": keras_model.get_weights(),  # Store model weights
+                    "params": best_params,  # Store best parameters
+                    "stats": stats,  # Store stats
+                }
             
-    #         info[m][a][k][o][3]=complete_model
+            info[m][a][k][o][3]=complete_model
 
-    # with open(config.STORE_PKL, "wb") as file:
-    #     pickle.dump(info, file)
+    with open(config.STORE_PKL, "wb") as file:
+        pickle.dump(info, file)
 
 
