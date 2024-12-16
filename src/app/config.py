@@ -29,6 +29,6 @@ FORECASTING_MODELS_PKL = os.path.join(PROJECT_FOLDER, os.path.join("data", "fore
 
 sender_email = "smartdashboard.teamb@libero.it"
 sender_password = "SmartApp24-25"
-recipient_email = "example@email.com"
+recipient_email = "mcaponio28@gmail.com"
 
 MAILER = MailSender(mail=sender_email, password=sender_password, recipient=recipient_email)
