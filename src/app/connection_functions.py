@@ -31,6 +31,7 @@ def get_datapoint(i):
         stream = json.load(file)
 
     stream = pd.DataFrame(stream)[38400:]
+    stream=stream[stream['name']=='Large Capacity Cutting Machine 1']
     datapoint = stream.iloc[i].to_dict()
 
     return datapoint

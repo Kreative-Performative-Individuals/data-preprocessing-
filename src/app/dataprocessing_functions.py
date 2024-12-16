@@ -970,7 +970,7 @@ def ad_predict(x, model):
     # dp = dp.drop(columns=nan_columns)
     dp = dp.fillna(0)
 
-    status = model.predict(dp)
+    status = model.fit_predict(dp)
     anomaly_score = model.decision_function(dp)
     anomaly_prob = 1 - (1 / (1 + np.exp(-5 * anomaly_score)))
     anomaly_prob = int(anomaly_prob[0] * 100)
