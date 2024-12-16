@@ -45,11 +45,10 @@ class MailSender:
         Returns:
             bool: True if the email was sent successfully, False otherwise.
         """
-        if self.anomaly_sent and "anomaly" in subject:
+        if self.anomaly_sent and "anomaly" in body:
             print("Anomaly email already sent.")
             return False
-        if self.broken_sent and "malfunctioning" in subject:
-            print("Malfunctioning email already sent.")
+        if self.broken_sent and "malfunctioning" in body:
             return False
         msg = MIMEMultipart()
         msg["From"] = self.mail
@@ -65,9 +64,11 @@ class MailSender:
             server.sendmail(self.mail, self.recipient, msg.as_string())
             print("Email sent successfully!")
             success = True
-            if "anomaly" in subject:
+            print()
+            if "anomaly" in body:
+                print("\nAnomaly email sent.")
                 self.anomaly_sent = True
-            elif "malfunctioning" in subject:
+            elif "malfunctioning" in body:
                 self.broken_sent = True
         except Exception as e:
             print(f"Error: {e}")
