@@ -1,6 +1,7 @@
 import json
 
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import Optional
 from src.app.on_request_pipeline import get_request
@@ -26,6 +27,15 @@ KAFKA_PORT = os.getenv("KAFKA_PORT")
 BATCH_SIZE = 1000
 
 app = FastAPI()
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 publisher = KafkaPublisher(
     topic=KAFKA_TOPIC_NAME,
     port=KAFKA_PORT,
