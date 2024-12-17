@@ -1,5 +1,5 @@
-from dataprocessing_functions import cleaning_pipeline, features,ad_predict, ad_train,ADWIN_drift,tdnn_forecasting_training,get_model_ad, get_model_ad_exp, update_model_forecast, update_model_ad, identity, ad_exp_train, update_model_ad_exp, ad_exp_predict
-from connection_functions import get_datapoint, get_historical_data, send_alert, store_datapoint
+from src.app.dataprocessing_functions import cleaning_pipeline, features,ad_predict, ad_train,ADWIN_drift,tdnn_forecasting_training,get_model_ad, get_model_ad_exp, update_model_forecast, update_model_ad, identity, ad_exp_train, update_model_ad_exp, ad_exp_predict
+from src.app.connection_functions import get_datapoint, get_historical_data, send_alert, store_datapoint
 
 import warnings
 
@@ -56,7 +56,6 @@ while c < 10:
                 print('I can check the drift again')
 
         ad_model = get_model_ad(cleaned_datapoint)
-        print(ad_model)
         ad_exp_model = get_model_ad_exp(cleaned_datapoint)
 
         # predict class

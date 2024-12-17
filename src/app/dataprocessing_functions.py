@@ -996,6 +996,7 @@ def ad_exp_predict(x, explainer, model):
     dp=dp[['sum', 'avg', 'min', 'max']]
     model.n_features_in_=4
     dp=dp.fillna(0)
+    print(model.predict(dp)[0])
     class_pred = lambda x: [0.01, 0.99] if model.predict([x])[0] == 1 else [0.99, 0.01]
     def predict_list(x):
         l = []
