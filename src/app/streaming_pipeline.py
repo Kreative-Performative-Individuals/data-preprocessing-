@@ -10,7 +10,7 @@ c = 0
 from_drift = 0
 check_drift = True
 
-while c < 10:
+while c < 100:
     new_datapoint = get_datapoint(c)  # CONNECTION WITH API
     print(f"\n{new_datapoint}")
 
@@ -56,14 +56,12 @@ while c < 10:
                 print('I can check the drift again')
 
         ad_model = get_model_ad(cleaned_datapoint)
-        ad_exp_model = get_model_ad_exp(cleaned_datapoint)
-
-        # predict class
         cleaned_datapoint['status'], anomaly_score = ad_predict(cleaned_datapoint, ad_model)
-        explanation = ad_exp_predict(cleaned_datapoint, ad_exp_model, ad_model)
 
         if cleaned_datapoint['status'] == "Anomaly":
             anomaly_identity = {key: cleaned_datapoint[key] for key in identity if key in cleaned_datapoint}
+            ad_exp_model = get_model_ad_exp(cleaned_datapoint)
+            explanation = ad_exp_predict(cleaned_datapoint, ad_exp_model, ad_model)
             anomaly_identity['explanation'] = explanation
             send_alert(anomaly_identity, 'Anomaly', None, anomaly_score)
 
